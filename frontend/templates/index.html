@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MQTT Simulation & Broker Evaluation</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .checkbox-scroll {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+    }
+    .section-title {
+      margin-bottom: 0.75rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="p-3">
+  <div class="container">
+    <h1 class="mb-4 text-center">MQTT Simulation & Broker Evaluation</h1>
+
+    <!-- 1. Topic Management -->
+    <div class="card mb-4 p-3">
+      <h5 class="section-title">1) Topic Management</h5>
+
+      <div class="mb-2">
+        <label for="singleTopic" class="form-label">Add a single topic</label>
+        <div class="input-group">
+          <input id="singleTopic" class="form-control" placeholder="e.g. temp/room1" />
+          <button class="btn btn-success" onclick="addSingleTopic()">Add Topic</button>
+        </div>
+      </div>
+
+      <div class="row g-2 mb-2">
+        <div class="col-md">
+          <label for="groupName" class="form-label">Topic Group Name</label>
+          <input id="groupName" class="form-control" placeholder="e.g. GroupA" />
+        </div>
+        <div class="col-md-auto">
+          <label for="groupCount" class="form-label">Number of Topics</label>
+          <input id="groupCount" type="number" class="form-control" value="3" min="1" />
+        </div>
+        <div class="col-md-auto d-flex align-items-end">
+          <button class="btn btn-primary" onclick="addTopicGroup()">Create Topic Group</button>
+        </div>
+        <div class="col-md-auto d-flex align-items-end">
+          <button class="btn btn-danger" onclick="resetTopics()">Reset All Topics</button>
+        </div>
+      </div>
+
+      <strong>Available Topics:</strong>
+      <ul id="topicList" class="list-group mt-2"></ul>
+    </div>
+
+    <!-- 2. Publisher Group -->
+    <div class="card mb-4 p-3">
+        <h5 class="section-title">2) Create Publisher Group</h5>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md">
+            <label for="pubGroupName" class="form-label">Group Name</label>
+            <input id="pubGroupName" class="form-control" placeholder="e.g. SensorGroup" />
+            </div>
+            <div class="col-md-auto">
+            <label for="pubGroupCount" class="form-label">Number of Publishers</label>
+            <input id="pubGroupCount" type="number" class="form-control" value="3" min="1" />
+            </div>
+            <div class="col-md-auto">
+            <label for="pubFreq" class="form-label">Message Frequency (s)</label>
+            <input id="pubFreq" type="number" class="form-control" value="1" />
+            </div>
+            <div class="col-md-auto">
+            <label for="pubPayload" class="form-label">Payload Size (bytes)</label>
+            <input id="pubPayload" type="number" class="form-control" value="128" />
+            </div>
+            <div class="col-md-auto">
+            <label for="pubQoS" class="form-label">QoS</label>
+            <select id="pubQoS" class="form-select">
+                <option value="0">QoS 0</option>
+                <option value="1" selected>QoS 1</option>
+                <option value="2">QoS 2</option>
+            </select>
+            </div>
+            <div class="col-md-auto d-flex align-items-end">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="pubRetain" />
+                <label class="form-check-label" for="pubRetain">Retain</label>
+            </div>
+            </div>
+        </div>
+
+        <label class="form-label">Select Topics for Publishers</label>
+        <div id="pubTopics" class="checkbox-scroll mb-3"></div>
+
+        <button class="btn btn-primary" onclick="addPublisherGroup()">Add Publisher Group</button>
+        <button class="btn btn-outline-danger mt-2" onclick="resetPublisherGroups()">Reset Publisher Groups</button>
+        <ul id="pubGroupList" class="list-group mt-2"></ul>
+    </div>
+
+
+    <!-- 3. Subscriber Group -->
+    <div class="card mb-4 p-3">
+        <h5 class="section-title">
+          3) Create Subscriber Group
+          <small class="text-muted">(<span id="subCount">0</span> added)</small>
+        </h5>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md">
+            <label for="subGroupName" class="form-label">Group Name</label>
+            <input id="subGroupName" class="form-control" placeholder="e.g. DashboardClients" />
+            </div>
+            <div class="col-md-auto">
+            <label for="subGroupCount" class="form-label">Number of Subscribers</label>
+            <input id="subGroupCount" type="number" class="form-control" value="3" min="1" />
+            </div>
+            <div class="col-md-auto">
+            <label for="subQoS" class="form-label">QoS</label>
+            <select id="subQoS" class="form-select">
+                <option value="0">QoS 0</option>
+                <option value="1" selected>QoS 1</option>
+                <option value="2">QoS 2</option>
+            </select>
+            </div>
+        </div>
+
+        <label class="form-label">Select Topics for Subscribers</label>
+        <div id="subTopics" class="checkbox-scroll mb-3"></div>
+
+        <button class="btn btn-primary" onclick="addSubscriberGroup()">Add Subscriber Group</button>
+        <button class="btn btn-outline-danger mt-2" onclick="resetSubscriberGroups()">Reset Subscriber Groups</button>
+        <ul id="subGroupList" class="list-group mt-2"></ul>
+    </div>
+
+
+    <div class="card p-3 mb-4">
+      <h5 class="section-title">4) Deploy Simulation to Node-RED</h5>
+      <div class="row g-2 mb-2">
+      <div class="col-md">
+        <label class="form-label">Broker Host</label>
+        <input id="brokerName" class="form-control" value="localhost" />
+      </div>
+      <div class="col-md-auto">
+        <label class="form-label">Broker Port</label>
+        <input id="brokerPort" type="number" class="form-control" value="1883" />
+      </div>
+    </div>
+      <button id="deployBtn" class="btn btn-success">🚀 Deploy to Node-RED</button>
+      <div id="deployStatus" class="mt-3 text-info"></div>
+    </div>
+
+    <div class="mt-3">
+      <button class="btn btn-outline-primary" onclick="toggleSimulation('start')">▶ Start Simulation</button>
+      <button class="btn btn-outline-warning" onclick="toggleSimulation('stop')">⏸ Stop Simulation</button>
+      <div id="simControlStatus" class="text-muted mt-2"></div>
+    </div>
+
+
+    <div class="card p-3 mb-4">
+        <h5 class="section-title">5) Save / Load Simulation Environment</h5>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-primary" onclick="saveConfig()">💾 Save</button>
+            <button class="btn btn-outline-secondary" onclick="loadConfig()">📂 Load</button>
+            <button class="btn btn-outline-success" onclick="downloadConfig()">⬇ Export JSON</button>
+            <input type="file" id="uploadConfigInput" accept=".json" style="display:none;" />
+            <label for="uploadConfigInput" class="btn btn-outline-info">⬆ Import JSON</label>
+        </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+
+    let publisherGroups = [];
+    let subscriberGroups = [];
+    let topicCache = [];
+
+
+  async function fetchTopics() {
+    const res = await fetch('/topics');
+    topicCache = await res.json();
+    return topicCache;
+  }
+
+    async function refreshTopicList(skipFetch = false) {
+        if (!skipFetch) {
+            const res = await fetch('/topics');
+            topicCache = await res.json();
+        }
+
+        const list = document.getElementById('topicList');
+        list.innerHTML = '';
+        topicCache.forEach(t => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.textContent = t;
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-sm btn-outline-danger';
+            btn.textContent = '❌';
+            btn.onclick = async () => {
+            await fetch(`/topics/${encodeURIComponent(t)}`, { method: 'DELETE' });
+            await fetchTopics();
+            refreshTopicList(true);
+            loadTopicCheckboxes('pubTopics');
+            loadTopicCheckboxes('subTopics');
+          };
+            li.appendChild(btn);
+            list.appendChild(li);
+        });
+    }
+
+    async function loadTopicCheckboxes(containerId) {
+        const topics = topicCache.length ? topicCache : await fetchTopics();
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        topics.forEach(t => {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+            const cb = document.createElement('input');
+            cb.className = 'form-check-input';
+            cb.type = 'checkbox';
+            cb.value = t;
+            cb.id = `${containerId}_${t}`;
+            const label = document.createElement('label');
+            label.className = 'form-check-label';
+            label.htmlFor = cb.id;
+            label.textContent = t;
+            div.appendChild(cb);
+            div.appendChild(label);
+            container.appendChild(div);
+        });
+    }
+
+    function getCheckedTopics(containerId) {
+      return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(cb => cb.value);
+    }
+
+    async function addSingleTopic() {
+      const name = document.getElementById('singleTopic').value.trim();
+      if (!name) return alert("Enter a topic name.");
+      await fetch('/topics', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ topic: name })
+      });
+      document.getElementById('singleTopic').value = '';
+      await fetchTopics();
+      refreshTopicList(true);
+      loadTopicCheckboxes('pubTopics');
+      loadTopicCheckboxes('subTopics');
+
+    }
+
+    async function addTopicGroup() {
+      const name = document.getElementById('groupName').value.trim();
+      const count = parseInt(document.getElementById('groupCount').value);
+      if (!name || isNaN(count)) return alert("Enter valid group name and count.");
+      await fetch('/topics', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ group_name: name, count })
+      });
+      document.getElementById('groupName').value = '';
+      document.getElementById('groupCount').value = '3';
+      await fetchTopics();
+      refreshTopicList(true);
+      loadTopicCheckboxes('pubTopics');
+      loadTopicCheckboxes('subTopics');
+    }
+
+    async function resetTopics() {
+      if (!confirm("Reset all topics and groups?")) return;
+      await fetch('/topics', { method: 'DELETE' });
+      await fetchTopics();
+      refreshTopicList(true);
+      loadTopicCheckboxes('pubTopics');
+      loadTopicCheckboxes('subTopics');
+    }
+
+    function addPublisherGroup() {
+        const group_name = document.getElementById('pubGroupName').value.trim();
+        const count = parseInt(document.getElementById('pubGroupCount').value);
+        const frequency = parseFloat(document.getElementById('pubFreq').value);
+        const payload_size = parseInt(document.getElementById('pubPayload').value);
+        const qos = parseInt(document.getElementById('pubQoS').value);
+        const retain = document.getElementById('pubRetain').checked;
+        const topics = getCheckedTopics('pubTopics');
+
+        if (!group_name || isNaN(count) || topics.length === 0) {
+            return alert("Fill all fields and select at least one topic.");
+        }
+
+        const group = { group_name, count, frequency, payload_size, qos, retain, topics };
+        publisherGroups.push(group);
+        renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
+    }
+
+    function addSubscriberGroup() {
+        const group_name = document.getElementById('subGroupName').value.trim();
+        const count = parseInt(document.getElementById('subGroupCount').value);
+        const qos = parseInt(document.getElementById('subQoS').value);
+        const topics = getCheckedTopics('subTopics');
+
+        if (!group_name || isNaN(count) || topics.length === 0) {
+            return alert("Fill all fields and select at least one topic.");
+        }
+
+        const group = { group_name, count, qos, topics };
+        subscriberGroups.push(group);
+        renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
+    }
+
+    function resetPublisherGroups() {
+        if (confirm("Clear all publisher groups?")) {
+            publisherGroups = [];
+            renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
+        }
+    }
+
+    function resetSubscriberGroups() {
+        if (confirm("Clear all subscriber groups?")) {
+            subscriberGroups = [];
+            renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
+        }
+    }
+
+    function renderGroupList(groups, containerId, kind) {
+      const list = document.getElementById(containerId);
+      list.innerHTML = '';
+
+      groups.forEach((group, index) => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+        const label = document.createElement('span');
+
+        const name = group.group_name || `Unnamed`;
+        const count = group.count ?? '?';
+        const topics = Array.isArray(group.topics) ? group.topics.join(', ') : '—';
+        const qos = group.qos ?? '—';
+        const retain = typeof group.retain === 'boolean' ? (group.retain ? 'Yes' : 'No') : '—';
+
+        if (kind === 'publisher') {
+          label.innerText = `${name} (${count}) → [${topics}] | QoS: ${qos} | Retain: ${retain}`;
+        } else {
+          label.innerText = `${name} (${count}) ← [${topics}] | QoS: ${qos}`;
+        }
+
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-sm btn-outline-danger';
+        btn.textContent = '❌';
+        btn.onclick = () => {
+          groups.splice(index, 1);
+          renderGroupList(groups, containerId, kind);
+        };
+
+        li.appendChild(label);
+        li.appendChild(btn);
+        list.appendChild(li);
+      });
+
+      if (kind === 'publisher' && document.getElementById('pubCount')) {
+        document.getElementById('pubCount').textContent = groups.length;
+      }
+      if (kind === 'subscriber' && document.getElementById('subCount')) {
+        document.getElementById('subCount').textContent = groups.length;
+      }
+  }
+
+
+
+    function displayInstances(instances, listId, warningId) {
+      const list = document.getElementById(listId);
+      const warn = document.getElementById(warningId);
+      list.innerHTML = '';
+      instances.forEach(inst => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.textContent = inst.topic
+        ? `${inst.name} ↔ ${inst.topic}`
+        : `${inst.name} ← ${inst.topics.join(', ')}`;
+        list.appendChild(li);
+      });
+      warn.innerHTML = instances.length === 0 ? '' : '';
+    }
+
+  async function refreshAllTopics() {
+    await fetchTopics();                
+    refreshTopicList(true);             
+    loadTopicCheckboxes('pubTopics');
+    loadTopicCheckboxes('subTopics');
+  }
+
+    window.addEventListener('load', () => {
+      refreshAllTopics();
+    });
+
+    function getCurrentConfig() {
+        return {
+            topics: topicCache,  
+            publisher_groups: publisherGroups,
+            subscriber_groups: subscriberGroups
+        };
+    }
+
+    async function applyConfig(config) {
+      // 1. Reset topics on backend
+      await fetch('/topics', { method: 'DELETE' });
+
+      // 2. Recreate topics on backend
+      const topics = config.topics || [];
+      for (const t of topics) {
+        await fetch('/topics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: t })
+        });
+      }
+
+      // 3. Update in-memory and group lists
+      topicCache = topics;
+      publisherGroups = config.publisher_groups || [];
+      subscriberGroups = config.subscriber_groups || [];
+
+      // 4. Fetch confirmed topics back from backend
+      await fetchTopics(); // fills topicCache again
+      refreshTopicList(true); // render topic list
+      loadTopicCheckboxes('pubTopics');
+      loadTopicCheckboxes('subTopics');
+
+      renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
+      renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
+    }
+
+
+    function saveConfig() {
+        const config = getCurrentConfig();
+        localStorage.setItem('mqtt_sim_config', JSON.stringify(config));
+        alert("Simulation config saved.");
+    }
+
+    function loadConfig() {
+        const raw = localStorage.getItem('mqtt_sim_config');
+        if (!raw) return alert("No saved config found.");
+        try {
+            const config = JSON.parse(raw);
+            applyConfig(config);
+            alert("Simulation config loaded.");
+        } catch {
+            alert("Failed to parse config.");
+        }
+    }
+
+    function downloadConfig() {
+        const blob = new Blob([JSON.stringify(getCurrentConfig(), null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mqtt_sim_config.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('uploadConfigInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+        try {
+        const config = JSON.parse(evt.target.result);
+        applyConfig(config);
+        alert("Imported simulation config.");
+        } catch {
+        alert("Invalid JSON file.");
+        }
+    };
+    reader.readAsText(file);
+    });
+
+    document.getElementById('deployBtn').addEventListener('click', async () => {
+    const payload = {
+      publisher_groups: publisherGroups,
+      subscriber_groups: subscriberGroups,
+      broker_name: document.getElementById('brokerName').value.trim(),
+      broker_port: parseInt(document.getElementById('brokerPort').value)
+    };
+
+    const deployBtn = document.getElementById('deployBtn');
+    const statusEl = document.getElementById('deployStatus');
+    deployBtn.disabled = true;
+    statusEl.innerHTML = "Deploying to Node-RED...";
+
+    try {
+      const res = await fetch('/deploy_simulation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        statusEl.innerHTML = "✅ Deployed successfully!";
+        if (data.warnings?.length) {
+          statusEl.innerHTML += "<br><strong>Warnings:</strong><br>" + data.warnings.map(w => `⚠️ ${w}`).join('<br>');
+        }
+      } else {
+        statusEl.innerHTML = "❌ Error: " + (data.error || "Unknown error");
+      }
+
+    } catch (err) {
+      statusEl.innerHTML = "❌ Exception: " + err.message;
+    } finally {
+      deployBtn.disabled = false;
+    }
+  });
+
+  async function toggleSimulation(action) {
+      const statusEl = document.getElementById('simControlStatus');
+      statusEl.innerText = `${action === 'start' ? 'Starting' : 'Stopping'} simulation...`;
+
+      try {
+        const res = await fetch(`/simulation/${action}`, { method: 'POST' });
+        const data = await res.json();
+
+        if (res.ok) {
+          statusEl.innerText = `✅ Simulation ${action}ed`;
+        } else {
+          statusEl.innerText = `❌ Error: ${data.error}`;
+        }
+      } catch (err) {
+        statusEl.innerText = `❌ Exception: ${err.message}`;
+      }
+  }
+
+  window.addEventListener('load', () => {
+    createChart();
+    setInterval(pollMetrics, 2000);
+  });
+
+
+
+  </script>
+</body>
+</html>
