@@ -24,7 +24,9 @@ class GroupExpander:
                         "name": name,
                         "topic": topics[i],
                         "interval": group.get("frequency", 1.0),
-                        "payload_size": group.get("payload_size", 256)
+                        "payload_size": group.get("payload_size", 256),
+                        "qos": group.get("qos", 1),
+                        "retain": group.get("retain", False)
                     }
                     expanded.append(instance)
 

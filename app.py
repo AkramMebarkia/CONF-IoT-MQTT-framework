@@ -210,7 +210,7 @@ def deploy_simulation():
                 "name": f"{pub['name']} → {pub['topic']}",
                 "topic": pub["topic"],
                 "qos": str(pub.get("qos", 1)),
-                "retain": pub.get("retain", False),
+                "retain": str(pub.get("retain", False)).lower(),
                 "broker": broker_config_id,
                 "x": 560,
                 "y": y,
