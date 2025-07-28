@@ -13,12 +13,18 @@ import sys
 import glob
 import json
 import uuid
+import docker
+import statistics
 import threading
 import subprocess
 import requests
-import docker
 import time
 from datetime import datetime
+from collections import deque
+
+
+delay_data = deque(maxlen=2000)
+
 
 from flask import (
     Flask, render_template, request,
@@ -32,6 +38,8 @@ def new_id():
 
 
 job_status = {}
+
+
 
 # def check_broker_reachability(host, port, timeout=3):
 #     client = mqtt.Client()
@@ -361,7 +369,7 @@ def start_delay_collector(broker='localhost', port=1883):
     print("✅ Delay collector started")
 
 # Optional: call it on startup (or trigger via /start endpoint)
-# Thread(target=start_delay_collector, args=('localhost', 1883), daemon=True).start()
+Thread(target=start_delay_collector, args=('localhost', 1883), daemon=True).start()
 
 @app.route('/api/metrics')
 def get_delay_metrics():
@@ -369,17 +377,182 @@ def get_delay_metrics():
     return jsonify(list(delay_data)[-100:])
 
 
+def monitor_container_stats(container_id, csv_path, stop_event):
+    import docker
+    from datetime import datetime
+
+    try:
+        client = docker.from_env()
+        container = client.containers.get(container_id)
+
+        with open(csv_path, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([
+                'timestamp', 'cpu_percent', 'mem_usage', 'mem_limit',
+                'net_rx', 'net_tx', 'block_read', 'block_write'
+            ])
+
+            stats_gen = container.stats(stream=True, decode=True)
+
+            while not stop_event.is_set():
+                try:
+                    stats = next(stats_gen)
+
+                    cpu_stats = stats.get('cpu_stats', {})
+                    precpu_stats = stats.get('precpu_stats', {})
+
+                    cpu_delta = cpu_stats.get('cpu_usage', {}).get('total_usage', 0) - \
+                                precpu_stats.get('cpu_usage', {}).get('total_usage', 0)
+                    system_delta = cpu_stats.get('system_cpu_usage', 0) - \
+                                   precpu_stats.get('system_cpu_usage', 0)
+
+                    cpu_percent = (cpu_delta / system_delta) * 100 if system_delta else 0
+
+                    mem_usage = stats.get('memory_stats', {}).get('usage', 0)
+                    mem_limit = stats.get('memory_stats', {}).get('limit', 0)
+
+                    networks = stats.get('networks', {})
+                    net_rx = sum(n.get('rx_bytes', 0) for n in networks.values())
+                    net_tx = sum(n.get('tx_bytes', 0) for n in networks.values())
+
+                    blkio_stats = stats.get('blkio_stats', {}).get('io_service_bytes_recursive', [])
+                    block_read = sum(b.get('value', 0) for b in blkio_stats if b.get('op') == 'Read')
+                    block_write = sum(b.get('value', 0) for b in blkio_stats if b.get('op') == 'Write')
+
+                    timestamp = datetime.now().isoformat()
+                    writer.writerow([
+                        timestamp,
+                        round(cpu_percent, 2),
+                        mem_usage,
+                        mem_limit,
+                        net_rx,
+                        net_tx,
+                        block_read,
+                        block_write
+                    ])
+                    csvfile.flush()
+                except Exception as e:
+                    print(f"[Monitor Error] {e}")
+                    time.sleep(1)
+    except Exception as e:
+        print(f"[Monitor Setup Failed] {e}")
+    finally:
+        stop_event.set()
+
+
+def run_tests_in_background(job_id, args):
+
+    broker_name = args['broker_name'].lower()
+    broker_port = int(args.get('broker_port', 1883))
+    duration = int(args.get('duration', 60))
+
+    container_id = BROKER_IDS.get(broker_name)
+    if not container_id:
+        job_status[job_id] = {'error': 'Invalid broker name'}
+        return
+
+    # --- Setup ---
+    job_status[job_id] = {
+        'status': 'running',
+        'delay_count': 0,
+        'avg_delay': 0.0,
+        'min_delay': 0.0,
+        'max_delay': 0.0,
+        'packet_loss_pct': 0.0,
+        'throughput_mps': 0.0,
+        'monitoring': 'running'
+    }
+
+    # Resource monitor setup
+    resource_csv = os.path.join('results', f'resource_usage_{broker_name}_{job_id}.csv')
+    stop_event = threading.Event()
+    monitor_thread = threading.Thread(
+        target=monitor_container_stats,
+        args=(container_id, resource_csv, stop_event),
+        daemon=True
+    )
+    monitor_thread.start()
+
+    # Clear buffer before collecting fresh data
+    delay_data.clear()
+
+    print(f"[EVAL] Monitoring for {duration}s...")
+    time.sleep(duration)
+
+    # After monitoring ends
+    stop_event.set()
+    monitor_thread.join()
+
+    # Analyze delay_data
+    records = list(delay_data)
+    delays = []
+    seq_ids = set()
+
+    for entry in records:
+        if 'delay' in entry:
+            delays.append(entry['delay'])
+        if 'seq_id' in entry:
+            seq_ids.add(entry['seq_id'])
+
+    # Delay stats
+    if delays:
+        job_status[job_id]['delay_count'] = len(delays)
+        job_status[job_id]['avg_delay'] = round(statistics.mean(delays), 2)
+        job_status[job_id]['min_delay'] = round(min(delays), 2)
+        job_status[job_id]['max_delay'] = round(max(delays), 2)
+
+    # Throughput (messages/sec)
+    job_status[job_id]['throughput_mps'] = round(len(delays) / duration, 2)
+
+    # Loss rate estimation (based on gaps in seq_id)
+    if seq_ids:
+        expected = max(seq_ids) - min(seq_ids) + 1
+        actual = len(seq_ids)
+        loss_pct = 100.0 * (1 - actual / expected) if expected > 0 else 0.0
+        job_status[job_id]['packet_loss_pct'] = round(loss_pct, 2)
+
+    job_status[job_id]['monitoring'] = 'done'
+    job_status[job_id]['status'] = 'done'
+
+    print(f"[EVAL] Done. Count={len(delays)}, Avg={job_status[job_id]['avg_delay']}ms, Loss={job_status[job_id]['packet_loss_pct']}%")
+
+
+@app.route('/run_tests', methods=['POST'])
+def run_tests():
+    args = request.get_json()
+    job_id = uuid.uuid4().hex
+    threading.Thread(
+        target=run_tests_in_background,
+        args=(job_id, args),
+        daemon=True
+    ).start()
+    return jsonify(job_id=job_id)
+
+@app.route('/status/<job_id>')
+def status(job_id):
+    return jsonify(job_status.get(job_id, {}))
+
 @app.route('/results/<broker_name>')
 def results(broker_name):
-    # Slice the delay metrics to the most recent 100 records
-    delay_samples = list(delay_data)[-100:]
+    job_id = request.args.get('job_id')
+    if not job_id:
+        return "Missing job_id", 400
+
+    # Get evaluation results
+    stats = job_status.get(job_id, {})
+    resource_csv = os.path.join('results', f'resource_usage_{broker_name}_{job_id}.csv')
+
+    resource_data = []
+    if os.path.exists(resource_csv):
+        with open(resource_csv) as f:
+            resource_data = list(csv.DictReader(f))
 
     return render_template("results.html",
         broker_name=broker_name,
-        delay_samples=delay_samples
+        job_id=job_id,
+        stats=stats,
+        resource_data=json.dumps(resource_data)
     )
-
-
 
 
 @app.route('/')

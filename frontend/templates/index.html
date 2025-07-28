@@ -154,11 +154,8 @@
       <div id="deployStatus" class="mt-3 text-info"></div>
     </div>
 
-    <div class="mt-3">
-      <button class="btn btn-outline-primary" onclick="toggleSimulation('start')">▶ Start Simulation</button>
-      <button class="btn btn-outline-warning" onclick="toggleSimulation('stop')">⏸ Stop Simulation</button>
-      <div id="simControlStatus" class="text-muted mt-2"></div>
-    </div>
+    <button onclick="startEvaluation()">🧪 Start Evaluation</button>
+    <div id="evalStatus" class="mt-2 text-info"></div>
 
 
     <div class="card p-3 mb-4">
@@ -520,31 +517,81 @@
     }
   });
 
-  async function toggleSimulation(action) {
-      const statusEl = document.getElementById('simControlStatus');
-      statusEl.innerText = `${action === 'start' ? 'Starting' : 'Stopping'} simulation...`;
+    async function startEvaluation() {
+  const statusEl = document.getElementById("evalStatus");
+  statusEl.innerText = "🕐 Running evaluation… please wait.";
 
-      try {
-        const res = await fetch(`/simulation/${action}`, { method: 'POST' });
-        const data = await res.json();
+  const broker = document.getElementById("brokerName").value;
+  const port = parseInt(document.getElementById("brokerPort").value) || 1883;
 
-        if (res.ok) {
-          statusEl.innerText = `✅ Simulation ${action}ed`;
-        } else {
-          statusEl.innerText = `❌ Error: ${data.error}`;
-        }
-      } catch (err) {
-        statusEl.innerText = `❌ Exception: ${err.message}`;
-      }
+  const payload = {
+    broker_name: broker,
+    broker_port: port,
+    duration: 60,
+    max_clients: 100,
+    payload_size: 256
+  };
+
+  try {
+    const res = await fetch('/run_tests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const { job_id } = await res.json();
+    console.log("✅ job_id received:", job_id);
+    pollStatus(broker, job_id, statusEl);
+  } catch (err) {
+    statusEl.innerText = "❌ Failed to start evaluation.";
+    console.error(err);
   }
+}
 
-  window.addEventListener('load', () => {
-    createChart();
-    setInterval(pollMetrics, 2000);
-  });
+async function pollStatus(broker, jobId, statusEl) {
+  const check = setInterval(async () => {
+    const res = await fetch(`/status/${jobId}`);
+    const status = await res.json();
+
+    if (status.status === "done") {
+      clearInterval(check);
+      statusEl.innerText = "✅ Evaluation complete. Redirecting…";
+      setTimeout(() => {
+        window.location.href = `/results/${broker}?job_id=${jobId}`;
+      }, 1000);
+    }
+
+    if (status.status === "error") {
+      clearInterval(check);
+      statusEl.innerText = "❌ Evaluation failed. Check logs.";
+    }
+  }, 2000);
+}
 
 
+  // async function toggleSimulation(action) {
+  //     const statusEl = document.getElementById('simControlStatus');
+  //     statusEl.innerText = `${action === 'start' ? 'Starting' : 'Stopping'} simulation...`;
 
-  </script>
+  //     try {
+  //       const res = await fetch(`/simulation/${action}`, { method: 'POST' });
+  //       const data = await res.json();
+
+  //       if (res.ok) {
+  //         statusEl.innerText = `✅ Simulation ${action}ed`;
+  //       } else {
+  //         statusEl.innerText = `❌ Error: ${data.error}`;
+  //       }
+  //     } catch (err) {
+  //       statusEl.innerText = `❌ Exception: ${err.message}`;
+  //     }
+  // }
+
+  // window.addEventListener('load', () => {
+  //   createChart();
+  //   setInterval(pollMetrics, 2000);
+  // });
+
+</script>
 </body>
 </html>
