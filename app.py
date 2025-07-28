@@ -1,46 +1,52 @@
-from deployment.topic_manager import TopicManager
-from deployment.group_expander import GroupExpander
-import paho.mqtt.client as mqtt
-
-from threading import Thread
-import time
-import paho.mqtt.client as mqtt
-from collections import deque
-
+# Standard library imports
 import csv
-import os
-import sys
-import glob
 import json
-import uuid
-import docker
+import os
 import statistics
 import threading
-import subprocess
-import requests
 import time
-from datetime import datetime
+import uuid
 from collections import deque
+from datetime import datetime
+from threading import Thread
 
+# Third-party imports
+import docker
+import paho.mqtt.client as mqtt
+import requests
+from flask import Flask, render_template, request, send_from_directory, jsonify
+from paho.mqtt.enums import CallbackAPIVersion
 
-delay_data = deque(maxlen=2000)
+# Local imports
+from deployment.topic_manager import TopicManager
+from deployment.group_expander import GroupExpander
 
-
-from flask import (
-    Flask, render_template, request,
-    send_from_directory, jsonify
-)
-
+# Flask app initialization
 app = Flask(__name__, template_folder="frontend/templates")
 
-def new_id():
-    return uuid.uuid4().hex[:8]
-
-
+# Global variables
+delay_data = deque(maxlen=2000)
 job_status = {}
 
+# Configuration constants
+NODE_RED_URL = 'http://localhost:1880'
 
+# Broker container IDs
+def get_broker_container(broker_name):
+    try:
+        client = docker.from_env()
+        return client.containers.get(f"mqtt-broker-{broker_name}")
+    except docker.errors.NotFound:
+        return None
 
+# Initialize topic manager
+topic_manager = TopicManager()
+
+def new_id():
+    """Generate a new 8-character hex ID"""
+    return uuid.uuid4().hex[:8]
+
+# Commented out broker reachability check due to Docker network conflicts
 # def check_broker_reachability(host, port, timeout=3):
 #     client = mqtt.Client()
 #     try:
@@ -51,29 +57,18 @@ job_status = {}
 #         print(f"[BROKER CHECK] Failed to reach {host}:{port} - {e}")
 #         return False
 
-
-# Node-RED Admin API URL
-NODE_RED_URL = 'http://localhost:1880'
-
-# Broker container IDs
-BROKER_IDS = {
-    'mosquitto': 'f9d12cd8dcabc8fcad6f5ab68c9a9b8e9a5ed018e18385d55c3dd941109a3690',
-    'activemq': 'cf0a288b8762ffc521693e234a2507e93ecd7ccaea17e5e5a0faa89ff80227a4',
-    'nanomq': '7c1c0838010b887742305d6a8a73ba3c5ad435d951f1a8ceb07e1edc5e9c1f1b',
-    'hivemq': 'c2cd7bbef9eb24857933a08830afdc7544fd3001839d0ac1f7af5a36b7c9b8b6',
-    'emqx': 'd51a342d9f098ce4452d64b11373c896a7ada477ec7d2ef446f51db1624f01e4',
-    'rabbitmq': 'b9eae0064bf3aaabd8438e6a4269db4bdf9c7970eec384b8f824111c6e7fd22a',
-    'vernemq': '637ccaec617e7b403f984ec4f8c6961aebb995f024db451a1de94eb94c3723ea'
-}
-
-topic_manager = TopicManager()
+# =============================================================================
+# TOPIC MANAGEMENT ROUTES
+# =============================================================================
 
 @app.route('/topics', methods=['GET'])
 def get_topics():
+    """Get all available topics"""
     return jsonify(topic_manager.get_all_topics())
 
 @app.route('/topics', methods=['POST'])
 def add_topic_or_group():
+    """Add a single topic or create a topic group"""
     data = request.get_json()
     if 'group_name' in data:
         topic_manager.create_group(data['group_name'], int(data.get('count', 1)))
@@ -83,8 +78,27 @@ def add_topic_or_group():
         return jsonify({"error": "Missing topic or group_name"}), 400
     return jsonify({"ok": True})
 
+@app.route('/topics/<name>', methods=['DELETE'])
+def delete_topic(name):
+    """Delete a specific topic"""
+    if topic_manager.remove_topic(name):
+        return jsonify({"ok": True})
+    else:
+        return jsonify({"error": "Topic not found"}), 404
+
+@app.route('/topics', methods=['DELETE'])
+def reset_topics():
+    """Reset all topics and groups"""
+    topic_manager.reset()
+    return jsonify({"ok": True})
+
+# =============================================================================
+# GROUP EXPANSION ROUTES
+# =============================================================================
+
 @app.route('/expand_groups', methods=['POST'])
 def expand_groups():
+    """Expand groups into individual instances"""
     data = request.get_json()
     kind = data.get('kind')  # "publisher" or "subscriber"
     groups = data.get('groups', [])
@@ -99,48 +113,38 @@ def expand_groups():
         "warnings": warnings
     })
 
-@app.route('/topics/<name>', methods=['DELETE'])
-def delete_topic(name):
-    if topic_manager.remove_topic(name):
-        return jsonify({"ok": True})
-    else:
-        return jsonify({"error": "Topic not found"}), 404
-
-@app.route('/topics', methods=['DELETE'])
-def reset_topics():
-    topic_manager.reset()
-    return jsonify({"ok": True})
-
+# =============================================================================
+# SIMULATION DEPLOYMENT ROUTES
+# =============================================================================
 
 @app.route('/deploy_simulation', methods=['POST'])
 def deploy_simulation():
-    from deployment.group_expander import GroupExpander
-    import requests
-
+    """Deploy simulation flows to Node-RED"""
     data = request.get_json()
 
     publisher_groups = data.get("publisher_groups", [])
     subscriber_groups = data.get("subscriber_groups", []) 
 
-    # --- Check broker rechability commented now because of the conflict between the Docker network and Flask --- 
-
+    # Get broker configuration
     broker_host = data.get("broker_name", "localhost")
     broker_port = int(data.get("broker_port", 1883))
 
+    # Broker reachability check is commented out due to Docker network conflicts
     # if not check_broker_reachability(broker_host, broker_port):
     #     return jsonify(error=f"Cannot connect to MQTT broker at {broker_host}:{broker_port}"), 400
 
-
-    # Expand groups
+    # Expand groups into individual instances
     pub_expander = GroupExpander(mode="publisher")
     pub_instances, pub_warnings = pub_expander.expand(publisher_groups)
 
     sub_expander = GroupExpander(mode="subscriber")
     sub_instances, sub_warnings = sub_expander.expand(subscriber_groups)
 
+    # Build Node-RED flow
     all_nodes = []
     wires = {}
 
+    # Create main tab
     tab_id = new_id()
     all_nodes.append({
         "id": tab_id,
@@ -150,7 +154,7 @@ def deploy_simulation():
         "info": ""
     })
 
-    # MQTT broker config node
+    # MQTT broker configuration node
     broker_config_id = new_id()
     all_nodes.append({
         "id": broker_config_id,
@@ -165,7 +169,7 @@ def deploy_simulation():
         "cleansession": True
     })
 
-    # Add publishers
+    # Add publisher nodes
     y = 80
     for pub in pub_instances:
         inject_id = new_id()
@@ -227,9 +231,8 @@ def deploy_simulation():
         ])
         y += 60
 
-    # Add subscribers
+    # Add subscriber nodes
     for sub in sub_instances:
-        x = 140
         for topic in sub["topics"]:
             mqtt_in_id = new_id()
             delay_func_id = new_id()
@@ -292,95 +295,104 @@ def deploy_simulation():
                     "y": y,
                     "wires": []
                 }
-        ])
-        y += 80
-
+            ])
+            y += 80
 
     # Deploy flows to Node-RED
     try:
         resp = requests.post(
-            'http://localhost:1880/flows',
+            f'{NODE_RED_URL}/flows',
             headers={'Content-Type': 'application/json'},
-            json=all_nodes
+            json=all_nodes,
+            timeout=10  # Add timeout
         )
         if resp.status_code == 204:
             return jsonify(ok=True, warnings=pub_warnings + sub_warnings)
         else:
             return jsonify(error=f"Failed to deploy: {resp.text}"), 500
-    except Exception as e:
-        return jsonify(error=str(e)), 500
-    
+    except requests.RequestException as e:
+        return jsonify(error=f"Node-RED connection failed: {str(e)}"), 500
+
+# =============================================================================
+# SIMULATION CONTROL ROUTES
+# =============================================================================
 
 @app.route('/simulation/<action>', methods=['POST'])
 def control_simulation(action):
-    import requests
-
+    """Start or stop the simulation by toggling inject nodes"""
     if action not in ('start', 'stop'):
         return jsonify({"error": "Invalid action"}), 400
 
     try:
-        # 1. Get all current flows
-        flows = requests.get('http://localhost:1880/flows').json()
+        # Get all current flows
+        flows_resp = requests.get(f'{NODE_RED_URL}/flows', timeout=10)
+        flows_resp.raise_for_status()
+        flows = flows_resp.json()
 
-        # 2. Toggle inject nodes
+        # Toggle inject nodes
         for node in flows:
             if node.get("type") == "inject":
                 node["disabled"] = (action == "stop")
 
-        # 3. Redeploy with updated inject states
+        # Redeploy with updated inject states
         resp = requests.post(
-            'http://localhost:1880/flows',
+            f'{NODE_RED_URL}/flows',
             headers={'Content-Type': 'application/json'},
-            json=flows
+            json=flows,
+            timeout=10
         )
+        resp.raise_for_status()
 
         if resp.status_code == 204:
             return jsonify(ok=True, action=action)
         else:
             return jsonify(error=resp.text), 500
 
-    except Exception as e:
-        return jsonify(error=str(e)), 500
-    
+    except requests.RequestException as e:
+        return jsonify(error=f"Node-RED operation failed: {str(e)}"), 500
 
-delay_data = deque(maxlen=2000)
+# =============================================================================
+# MQTT DELAY COLLECTION
+# =============================================================================
 
 def on_message(client, userdata, msg):
+    """Handle incoming delay statistics messages"""
     try:
-        import json
         payload = json.loads(msg.payload.decode())
         payload['timestamp'] = time.time()
         delay_data.append(payload)
+    except json.JSONDecodeError as e:
+        print(f"[Delay Parser Error] Invalid JSON: {e}")
     except Exception as e:
-        print(f"[Delay Parser Error] {e}")
+        print(f"[Delay Parser Error] Unexpected error: {e}")
 
 def start_delay_collector(broker='localhost', port=1883):
+    """Start the MQTT client to collect delay statistics"""
     client = mqtt.Client()
     client.on_message = on_message
 
     try:
         client.connect(broker, port, 60)
+        client.subscribe("sim/stats/delay")
+        client.loop_start()
+        print("✅ Delay collector started")
     except Exception as e:
-        print(f"❌ Failed to connect to broker: {e}")
-        return
+        print(f"❌ Failed to start delay collector: {e}")
 
-    client.subscribe("sim/stats/delay")
-    client.loop_start()
-    print("✅ Delay collector started")
-
-# Optional: call it on startup (or trigger via /start endpoint)
+# Start delay collector in background thread
 Thread(target=start_delay_collector, args=('localhost', 1883), daemon=True).start()
 
 @app.route('/api/metrics')
 def get_delay_metrics():
-    # Return latest 100 records
+    """Get latest delay metrics"""
     return jsonify(list(delay_data)[-100:])
 
+# =============================================================================
+# DOCKER MONITORING FUNCTIONS
+# =============================================================================
 
 def monitor_container_stats(container_id, csv_path, stop_event):
-    import docker
-    from datetime import datetime
-
+    """Monitor Docker container resource usage and save to CSV"""
     try:
         client = docker.from_env()
         container = client.containers.get(container_id)
@@ -398,6 +410,7 @@ def monitor_container_stats(container_id, csv_path, stop_event):
                 try:
                     stats = next(stats_gen)
 
+                    # Calculate CPU percentage
                     cpu_stats = stats.get('cpu_stats', {})
                     precpu_stats = stats.get('precpu_stats', {})
 
@@ -406,15 +419,18 @@ def monitor_container_stats(container_id, csv_path, stop_event):
                     system_delta = cpu_stats.get('system_cpu_usage', 0) - \
                                    precpu_stats.get('system_cpu_usage', 0)
 
-                    cpu_percent = (cpu_delta / system_delta) * 100 if system_delta else 0
+                    cpu_percent = (cpu_delta / system_delta) * 100 if system_delta > 0 else 0
 
+                    # Memory statistics
                     mem_usage = stats.get('memory_stats', {}).get('usage', 0)
                     mem_limit = stats.get('memory_stats', {}).get('limit', 0)
 
+                    # Network statistics
                     networks = stats.get('networks', {})
                     net_rx = sum(n.get('rx_bytes', 0) for n in networks.values())
                     net_tx = sum(n.get('tx_bytes', 0) for n in networks.values())
 
+                    # Block I/O statistics
                     blkio_stats = stats.get('blkio_stats', {}).get('io_service_bytes_recursive', [])
                     block_read = sum(b.get('value', 0) for b in blkio_stats if b.get('op') == 'Read')
                     block_write = sum(b.get('value', 0) for b in blkio_stats if b.get('op') == 'Write')
@@ -431,27 +447,37 @@ def monitor_container_stats(container_id, csv_path, stop_event):
                         block_write
                     ])
                     csvfile.flush()
+                    
+                except StopIteration:
+                    print("[Monitor] Stats stream ended")
+                    break
                 except Exception as e:
                     print(f"[Monitor Error] {e}")
                     time.sleep(1)
+                    
+    except docker.errors.NotFound:
+        print(f"[Monitor Setup Failed] Container {container_id} not found")
     except Exception as e:
         print(f"[Monitor Setup Failed] {e}")
     finally:
         stop_event.set()
 
+# =============================================================================
+# EVALUATION AND TESTING ROUTES
+# =============================================================================
 
 def run_tests_in_background(job_id, args):
-
+    """Run broker evaluation tests in background"""
     broker_name = args['broker_name'].lower()
     broker_port = int(args.get('broker_port', 1883))
     duration = int(args.get('duration', 60))
 
     container_id = BROKER_IDS.get(broker_name)
     if not container_id:
-        job_status[job_id] = {'error': 'Invalid broker name'}
+        job_status[job_id] = {'error': f'Invalid broker name: {broker_name}'}
         return
 
-    # --- Setup ---
+    # Initialize job status
     job_status[job_id] = {
         'status': 'running',
         'delay_count': 0,
@@ -463,7 +489,7 @@ def run_tests_in_background(job_id, args):
         'monitoring': 'running'
     }
 
-    # Resource monitor setup
+    # Setup resource monitoring
     resource_csv = os.path.join('results', f'resource_usage_{broker_name}_{job_id}.csv')
     stop_event = threading.Event()
     monitor_thread = threading.Thread(
@@ -476,14 +502,14 @@ def run_tests_in_background(job_id, args):
     # Clear buffer before collecting fresh data
     delay_data.clear()
 
-    print(f"[EVAL] Monitoring for {duration}s...")
+    print(f"[EVAL] Monitoring {broker_name} for {duration}s...")
     time.sleep(duration)
 
-    # After monitoring ends
+    # Stop monitoring
     stop_event.set()
-    monitor_thread.join()
+    monitor_thread.join(timeout=5)
 
-    # Analyze delay_data
+    # Analyze collected delay data
     records = list(delay_data)
     delays = []
     seq_ids = set()
@@ -494,17 +520,17 @@ def run_tests_in_background(job_id, args):
         if 'seq_id' in entry:
             seq_ids.add(entry['seq_id'])
 
-    # Delay stats
+    # Calculate delay statistics
     if delays:
         job_status[job_id]['delay_count'] = len(delays)
         job_status[job_id]['avg_delay'] = round(statistics.mean(delays), 2)
         job_status[job_id]['min_delay'] = round(min(delays), 2)
         job_status[job_id]['max_delay'] = round(max(delays), 2)
 
-    # Throughput (messages/sec)
-    job_status[job_id]['throughput_mps'] = round(len(delays) / duration, 2)
+    # Calculate throughput (messages/sec)
+    job_status[job_id]['throughput_mps'] = round(len(delays) / duration, 2) if duration > 0 else 0
 
-    # Loss rate estimation (based on gaps in seq_id)
+    # Estimate packet loss rate (based on gaps in seq_id)
     if seq_ids:
         expected = max(seq_ids) - min(seq_ids) + 1
         actual = len(seq_ids)
@@ -514,11 +540,12 @@ def run_tests_in_background(job_id, args):
     job_status[job_id]['monitoring'] = 'done'
     job_status[job_id]['status'] = 'done'
 
-    print(f"[EVAL] Done. Count={len(delays)}, Avg={job_status[job_id]['avg_delay']}ms, Loss={job_status[job_id]['packet_loss_pct']}%")
-
+    print(f"[EVAL] Done. Count={len(delays)}, Avg={job_status[job_id]['avg_delay']}ms, "
+          f"Loss={job_status[job_id]['packet_loss_pct']}%")
 
 @app.route('/run_tests', methods=['POST'])
 def run_tests():
+    """Start broker evaluation tests"""
     args = request.get_json()
     job_id = uuid.uuid4().hex
     threading.Thread(
@@ -530,10 +557,12 @@ def run_tests():
 
 @app.route('/status/<job_id>')
 def status(job_id):
+    """Get status of a running evaluation job"""
     return jsonify(job_status.get(job_id, {}))
 
 @app.route('/results/<broker_name>')
 def results(broker_name):
+    """Display evaluation results"""
     job_id = request.args.get('job_id')
     if not job_id:
         return "Missing job_id", 400
@@ -544,8 +573,11 @@ def results(broker_name):
 
     resource_data = []
     if os.path.exists(resource_csv):
-        with open(resource_csv) as f:
-            resource_data = list(csv.DictReader(f))
+        try:
+            with open(resource_csv) as f:
+                resource_data = list(csv.DictReader(f))
+        except Exception as e:
+            print(f"[Results] Error reading CSV: {e}")
 
     return render_template("results.html",
         broker_name=broker_name,
@@ -554,10 +586,16 @@ def results(broker_name):
         resource_data=json.dumps(resource_data)
     )
 
+# =============================================================================
+# MAIN ROUTES
+# =============================================================================
 
 @app.route('/')
 def index():
+    """Main application page"""
     return render_template('index.html')
 
 if __name__ == '__main__':
+    # Ensure results directory exists
+    os.makedirs('results', exist_ok=True)
     app.run(debug=True)
