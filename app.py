@@ -35,7 +35,7 @@ NODE_RED_URL = 'http://localhost:1880'
 def get_broker_container(broker_name):
     try:
         client = docker.from_env()
-        return client.containers.get(f"mqtt-broker-{broker_name}")
+        return client.containers.get(broker_name)
     except docker.errors.NotFound:
         return None
 
@@ -355,32 +355,28 @@ def control_simulation(action):
 # MQTT DELAY COLLECTION
 # =============================================================================
 
-def on_message(client, userdata, msg):
-    """Handle incoming delay statistics messages"""
+def start_delay_collector(broker_host, broker_port, delay_deque):
+    client = mqtt.Client(CallbackAPIVersion.VERSION2)
+    client.on_message = lambda cl, userdata, msg: on_message(cl, msg, delay_deque)
+    try:
+        client.connect(broker_host, broker_port, 60)
+        client.subscribe("sim/stats/delay")
+        client.loop_start()
+        return client
+    except Exception as e:
+        print(f"❌ Failed to connect to broker: {e}")
+        return None
+
+def on_message(client, msg, delay_deque):
     try:
         payload = json.loads(msg.payload.decode())
         payload['timestamp'] = time.time()
-        delay_data.append(payload)
-    except json.JSONDecodeError as e:
-        print(f"[Delay Parser Error] Invalid JSON: {e}")
+        delay_deque.append(payload)
     except Exception as e:
-        print(f"[Delay Parser Error] Unexpected error: {e}")
-
-def start_delay_collector(broker='localhost', port=1883):
-    """Start the MQTT client to collect delay statistics"""
-    client = mqtt.Client()
-    client.on_message = on_message
-
-    try:
-        client.connect(broker, port, 60)
-        client.subscribe("sim/stats/delay")
-        client.loop_start()
-        print("✅ Delay collector started")
-    except Exception as e:
-        print(f"❌ Failed to start delay collector: {e}")
+        print(f"[Delay Parser Error] {e}")
 
 # Start delay collector in background thread
-Thread(target=start_delay_collector, args=('localhost', 1883), daemon=True).start()
+# Thread(target=start_delay_collector, args=('localhost', 1883), daemon=True).start()
 
 @app.route('/api/metrics')
 def get_delay_metrics():
@@ -467,81 +463,98 @@ def monitor_container_stats(container_id, csv_path, stop_event):
 # =============================================================================
 
 def run_tests_in_background(job_id, args):
-    """Run broker evaluation tests in background"""
     broker_name = args['broker_name'].lower()
     broker_port = int(args.get('broker_port', 1883))
     duration = int(args.get('duration', 60))
-
-    container_id = BROKER_IDS.get(broker_name)
-    if not container_id:
-        job_status[job_id] = {'error': f'Invalid broker name: {broker_name}'}
+    
+    container = get_broker_container(broker_name)
+    if not container:
+        job_status[job_id] = {'error': f'Broker container not found: {broker_name}'}
         return
 
-    # Initialize job status
+    # Job-specific delay storage
+    delay_deque = deque(maxlen=5000)
+    delay_client = start_delay_collector('localhost', broker_port, delay_deque)
+    
     job_status[job_id] = {
         'status': 'running',
+        'broker_name': broker_name,
         'delay_count': 0,
         'avg_delay': 0.0,
         'min_delay': 0.0,
         'max_delay': 0.0,
         'packet_loss_pct': 0.0,
         'throughput_mps': 0.0,
-        'monitoring': 'running'
+        'monitoring': 'running',
+        'delay_data': delay_deque,
+        'delay_client': delay_client
     }
 
-    # Setup resource monitoring
+    # Resource monitoring with non-blocking approach
     resource_csv = os.path.join('results', f'resource_usage_{broker_name}_{job_id}.csv')
     stop_event = threading.Event()
     monitor_thread = threading.Thread(
         target=monitor_container_stats,
-        args=(container_id, resource_csv, stop_event),
+        args=(container.id, resource_csv, stop_event),
         daemon=True
     )
     monitor_thread.start()
 
-    # Clear buffer before collecting fresh data
-    delay_data.clear()
+    # Test duration handling
+    start_time = time.time()
+    while time.time() - start_time < duration:
+        time.sleep(1)
+        if stop_event.is_set():
+            break
 
-    print(f"[EVAL] Monitoring {broker_name} for {duration}s...")
-    time.sleep(duration)
-
-    # Stop monitoring
+    # Cleanup monitoring
     stop_event.set()
     monitor_thread.join(timeout=5)
+    
+    if delay_client:
+        delay_client.loop_stop()
+        delay_client.disconnect()
 
-    # Analyze collected delay data
-    records = list(delay_data)
-    delays = []
-    seq_ids = set()
+    # Analysis with proper sequence handling
+    records = list(delay_deque)
+    topic_stats = {}
+    
+    for record in records:
+        topic = record['topic']
+        group = record['name'].rsplit('_', 1)[0]  # Extract group name
+        
+        if group not in topic_stats:
+            topic_stats[group] = {'delays': [], 'seq_ids': set()}
+        
+        topic_stats[group]['delays'].append(record['delay'])
+        topic_stats[group]['seq_ids'].add(record['seq_id'])
 
-    for entry in records:
-        if 'delay' in entry:
-            delays.append(entry['delay'])
-        if 'seq_id' in entry:
-            seq_ids.add(entry['seq_id'])
-
-    # Calculate delay statistics
-    if delays:
-        job_status[job_id]['delay_count'] = len(delays)
-        job_status[job_id]['avg_delay'] = round(statistics.mean(delays), 2)
-        job_status[job_id]['min_delay'] = round(min(delays), 2)
-        job_status[job_id]['max_delay'] = round(max(delays), 2)
-
-    # Calculate throughput (messages/sec)
-    job_status[job_id]['throughput_mps'] = round(len(delays) / duration, 2) if duration > 0 else 0
-
-    # Estimate packet loss rate (based on gaps in seq_id)
+    # Calculate metrics
+    all_delays = [d for group in topic_stats.values() for d in group['delays']]
+    seq_ids = [s for group in topic_stats.values() for s in group['seq_ids']]
+    
+    if all_delays:
+        job_status[job_id].update({
+            'delay_count': len(all_delays),
+            'avg_delay': round(statistics.mean(all_delays), 2),
+            'min_delay': round(min(all_delays), 2),
+            'max_delay': round(max(all_delays), 2)
+        })
+    
+    # Packet loss calculation
     if seq_ids:
-        expected = max(seq_ids) - min(seq_ids) + 1
+        min_seq = min(seq_ids)
+        max_seq = max(seq_ids)
+        expected = max_seq - min_seq + 1
         actual = len(seq_ids)
         loss_pct = 100.0 * (1 - actual / expected) if expected > 0 else 0.0
         job_status[job_id]['packet_loss_pct'] = round(loss_pct, 2)
-
-    job_status[job_id]['monitoring'] = 'done'
-    job_status[job_id]['status'] = 'done'
-
-    print(f"[EVAL] Done. Count={len(delays)}, Avg={job_status[job_id]['avg_delay']}ms, "
-          f"Loss={job_status[job_id]['packet_loss_pct']}%")
+    
+    job_status[job_id].update({
+        'throughput_mps': round(len(all_delays) / duration, 2),
+        'status': 'done',
+        'monitoring': 'done'
+    })
 
 @app.route('/run_tests', methods=['POST'])
 def run_tests():
@@ -557,34 +570,30 @@ def run_tests():
 
 @app.route('/status/<job_id>')
 def status(job_id):
-    """Get status of a running evaluation job"""
-    return jsonify(job_status.get(job_id, {}))
+    raw = job_status.get(job_id, {})
+    # Remove unserializable fields
+    clean = {k: v for k, v in raw.items() if k not in ('delay_client', 'delay_data')}
+    return jsonify(clean)
 
-@app.route('/results/<broker_name>')
-def results(broker_name):
-    """Display evaluation results"""
-    job_id = request.args.get('job_id')
-    if not job_id:
-        return "Missing job_id", 400
-
-    # Get evaluation results
+@app.route('/results/<job_id>')
+def results(job_id):
     stats = job_status.get(job_id, {})
+    if not stats:
+        return "Job not found", 404
+        
+    broker_name = stats.get('broker_name', 'unknown')
     resource_csv = os.path.join('results', f'resource_usage_{broker_name}_{job_id}.csv')
-
+    
     resource_data = []
     if os.path.exists(resource_csv):
-        try:
-            with open(resource_csv) as f:
-                resource_data = list(csv.DictReader(f))
-        except Exception as e:
-            print(f"[Results] Error reading CSV: {e}")
-
-    return render_template("results.html",
+        with open(resource_csv) as f:
+            resource_data = list(csv.DictReader(f))
+    
+    return render_template ("results.html",
         broker_name=broker_name,
         job_id=job_id,
         stats=stats,
-        resource_data=json.dumps(resource_data)
-    )
+        resource_data=json.dumps(resource_data))
 
 # =============================================================================
 # MAIN ROUTES

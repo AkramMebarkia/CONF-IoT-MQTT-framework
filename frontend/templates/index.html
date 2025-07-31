@@ -170,7 +170,11 @@
     </div>
   </div>
 
+   
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
   <script>
 
     let publisherGroups = [];
@@ -517,56 +521,67 @@
     }
   });
 
-    async function startEvaluation() {
-  const statusEl = document.getElementById("evalStatus");
-  statusEl.innerText = "🕐 Running evaluation… please wait.";
+  async function startEvaluation() {
+    // build the payload
+    const broker    = document.getElementById("brokerName").value.trim();
+    const port      = parseInt(document.getElementById("brokerPort").value, 10) || 1883;
+    const payload   = { broker_name: broker, broker_port: port,
+                        duration: 60,   // or pull from inputs if you add them
+                        max_clients:100,
+                        payload_size:256 };
 
-  const broker = document.getElementById("brokerName").value;
-  const port = parseInt(document.getElementById("brokerPort").value) || 1883;
+    // kick off tests
+    let job_id;
+    try {
+      const res = await fetch('/run_tests', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      job_id = json.job_id;
+    } catch (err) {
+      return alert("Failed to start evaluation: " + err.message);
+    }
 
-  const payload = {
-    broker_name: broker,
-    broker_port: port,
-    duration: 60,
-    max_clients: 100,
-    payload_size: 256
-  };
+    // show progress modal
+    const modalEl = document.getElementById('progressModal');
+    const modal   = new bootstrap.Modal(modalEl);
+    const txt     = document.getElementById('progressText');
+    const bar     = document.getElementById('progressBar');
+    modal.show();
 
-  try {
-    const res = await fetch('/run_tests', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    const steps  = ['step1','step2','step3'];
+    const labels = ['Pinger…','Availability…','Max‑clients…'];
+    const params = new URLSearchParams(payload);
 
-    const { job_id } = await res.json();
-    console.log("✅ job_id received:", job_id);
-    pollStatus(broker, job_id, statusEl);
-  } catch (err) {
-    statusEl.innerText = "❌ Failed to start evaluation.";
-    console.error(err);
+    // poll every second
+    const iv = setInterval(async () => {
+      const status = await (await fetch(`/status/${job_id}`)).json();
+      console.log(status);
+      const done   = steps.filter(s => status[s]==='done').length;
+
+      // update UI
+      txt.textContent   = labels[Math.min(done,2)];
+      bar.style.width   = (done/3*100)+'%';
+      bar.textContent   = `${done}/3`;
+
+      if (status.error || done===3) {
+        clearInterval(iv);
+        modal.hide();
+
+        if (done===3) {
+          // success → redirect
+          window.location = `/results/${broker}?job_id=${job_id}&${params}`;
+        } else {
+          // error state
+          txt.textContent = 'Error!';
+          bar.className   = 'progress-bar bg-danger';
+        }
+      }
+    }, 1000);
   }
-}
-
-async function pollStatus(broker, jobId, statusEl) {
-  const check = setInterval(async () => {
-    const res = await fetch(`/status/${jobId}`);
-    const status = await res.json();
-
-    if (status.status === "done") {
-      clearInterval(check);
-      statusEl.innerText = "✅ Evaluation complete. Redirecting…";
-      setTimeout(() => {
-        window.location.href = `/results/${broker}?job_id=${jobId}`;
-      }, 1000);
-    }
-
-    if (status.status === "error") {
-      clearInterval(check);
-      statusEl.innerText = "❌ Evaluation failed. Check logs.";
-    }
-  }, 2000);
-}
 
 
   // async function toggleSimulation(action) {
@@ -593,5 +608,24 @@ async function pollStatus(broker, jobId, statusEl) {
   // });
 
 </script>
+
+<div class="modal fade" id="progressModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content p-4 text-center">
+        <h5 id="progressText">Preparing…</h5>
+        <div class="progress mt-3" style="height:25px;">
+          <div
+            id="progressBar"
+            class="progress-bar bg-info"
+            role="progressbar"
+            style="width:0%"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >0/3</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

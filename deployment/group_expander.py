@@ -22,6 +22,7 @@ class GroupExpander:
                     name = base_name if count == 1 else f"{base_name}_{i+1}"
                     instance = {
                         "name": name,
+                        "group": base_name,
                         "topic": topics[i],
                         "interval": group.get("frequency", 1.0),
                         "payload_size": group.get("payload_size", 256),
