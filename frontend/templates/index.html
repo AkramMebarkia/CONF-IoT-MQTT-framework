@@ -154,6 +154,23 @@
       <div id="deployStatus" class="mt-3 text-info"></div>
     </div>
 
+    <div class="card p-3 mb-4">
+      <h5 class="section-title">4b) Evaluation Configuration</h5>
+
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label for="evalDuration" class="form-label">Test Duration (s)</label>
+          <input id="evalDuration" type="number" class="form-control" value="60" min="5" />
+        </div>
+
+        <div class="col-md-3">
+          <label for="evalPayloadSize" class="form-label">Payload Size (bytes)</label>
+          <input id="evalPayloadSize" type="number" class="form-control" value="256" min="1" />
+        </div>
+      </div>
+    </div>
+
+
     <button onclick="startEvaluation()">🧪 Start Evaluation</button>
     <div id="evalStatus" class="mt-2 text-info"></div>
 
@@ -525,10 +542,13 @@
     // build the payload
     const broker    = document.getElementById("brokerName").value.trim();
     const port      = parseInt(document.getElementById("brokerPort").value, 10) || 1883;
-    const payload   = { broker_name: broker, broker_port: port,
-                        duration: 60,   // or pull from inputs if you add them
-                        max_clients:100,
-                        payload_size:256 };
+    const payload = {
+      broker_name: document.getElementById("brokerName").value.trim(),
+      broker_port: parseInt(document.getElementById("brokerPort").value, 10) || 1883,
+      duration: parseInt(document.getElementById("evalDuration").value, 10) || 60,
+      payload_size: parseInt(document.getElementById("evalPayloadSize").value, 10) || 256,
+      max_clients: 100  // optional/future use
+    };
 
     // kick off tests
     let job_id;

@@ -9,12 +9,23 @@
 
   <h4>🧪 Evaluation Metrics</h4>
   <ul>
-    <li><strong>Messages Received:</strong> {{ stats.delay_count }}</li>
-    <li><strong>Average Delay:</strong> {{ stats.avg_delay }} ms</li>
-    <li><strong>Min Delay:</strong> {{ stats.min_delay }} ms</li>
-    <li><strong>Max Delay:</strong> {{ stats.max_delay }} ms</li>
-    <li><strong>Packet Loss:</strong> {{ stats.packet_loss_pct }}%</li>
-    <li><strong>Throughput:</strong> {{ stats.throughput_mps }} messages/sec</li>
+    <li><strong>Total Messages:</strong> {{ stats.latency_count }}</li>
+    <li><strong>Average Delay:</strong> {{ stats.latency_avg_delay }} ms</li>
+    <li><strong>Min Delay:</strong> {{ stats.latency_min_delay }} ms</li>
+    <li><strong>Max Delay:</strong> {{ stats.latency_max_delay }} ms</li>
+    <li><strong>Jitter:</strong> {{ stats.latency_jitter }} ms</li>
+    <li><strong>Throughput:</strong> {{ stats.throughput_throughput_mps }} messages/sec</li>
+  </ul>
+
+  <h4>📶 Availability</h4>
+  <ul>
+    <li><strong>Availability Checks:</strong> {{ stats.availability_total_checks }}</li>
+    <li><strong>Failures:</strong> {{ stats.availability_failures }}</li>
+    <li><strong>Recoveries:</strong> {{ stats.availability_recoveries }}</li>
+    <li><strong>Downtime Events:</strong> {{ stats.availability_downtime_events }}</li>
+    <li><strong>Avg Downtime:</strong> {{ stats.availability_avg_downtime_sec }} s</li>
+    <li><strong>MTBF:</strong> {{ stats.availability_mtbf_sec }} s</li>
+    <li><strong>MTTR:</strong> {{ stats.availability_mttr_sec }} s</li>
   </ul>
 
   <h4>📈 Resource Usage (CPU/RAM)</h4>

@@ -10,6 +10,8 @@ from collections import deque
 from datetime import datetime
 from threading import Thread
 
+from collections import deque
+
 # Third-party imports
 import docker
 import paho.mqtt.client as mqtt
@@ -20,6 +22,8 @@ from paho.mqtt.enums import CallbackAPIVersion
 # Local imports
 from deployment.topic_manager import TopicManager
 from deployment.group_expander import GroupExpander
+
+from evaluation.controller import EvaluationController
 
 # Flask app initialization
 app = Flask(__name__, template_folder="frontend/templates")
@@ -463,34 +467,20 @@ def monitor_container_stats(container_id, csv_path, stop_event):
 # =============================================================================
 
 def run_tests_in_background(job_id, args):
-    broker_name = args['broker_name'].lower()
+    broker_name = args.get('broker_name', 'localhost').lower()
     broker_port = int(args.get('broker_port', 1883))
     duration = int(args.get('duration', 60))
-    
+
+    # Verify container exists
     container = get_broker_container(broker_name)
     if not container:
-        job_status[job_id] = {'error': f'Broker container not found: {broker_name}'}
+        job_status[job_id] = {
+            'error': f'Broker container not found: {broker_name}',
+            'status': 'failed'
+        }
         return
 
-    # Job-specific delay storage
-    delay_deque = deque(maxlen=5000)
-    delay_client = start_delay_collector('localhost', broker_port, delay_deque)
-    
-    job_status[job_id] = {
-        'status': 'running',
-        'broker_name': broker_name,
-        'delay_count': 0,
-        'avg_delay': 0.0,
-        'min_delay': 0.0,
-        'max_delay': 0.0,
-        'packet_loss_pct': 0.0,
-        'throughput_mps': 0.0,
-        'monitoring': 'running',
-        'delay_data': delay_deque,
-        'delay_client': delay_client
-    }
-
-    # Resource monitoring with non-blocking approach
+    # Set up resource monitoring
     resource_csv = os.path.join('results', f'resource_usage_{broker_name}_{job_id}.csv')
     stop_event = threading.Event()
     monitor_thread = threading.Thread(
@@ -500,61 +490,37 @@ def run_tests_in_background(job_id, args):
     )
     monitor_thread.start()
 
-    # Test duration handling
-    start_time = time.time()
-    while time.time() - start_time < duration:
-        time.sleep(1)
-        if stop_event.is_set():
-            break
+    # Run evaluation (latency, throughput, availability)
+    controller = EvaluationController(
+        broker_host=broker_name,
+        broker_port=broker_port,
+        duration=duration,
+        job_id=job_id
+    )
+    try:
+        eval_results = controller.run()
+    except Exception as e:
+        stop_event.set()
+        monitor_thread.join(timeout=5)
+        job_status[job_id] = {
+            'status': 'failed',
+            'error': f'Evaluation error: {str(e)}'
+        }
+        return
 
-    # Cleanup monitoring
+    # Finish resource monitoring
     stop_event.set()
     monitor_thread.join(timeout=5)
-    
-    if delay_client:
-        delay_client.loop_stop()
-        delay_client.disconnect()
 
-    # Analysis with proper sequence handling
-    records = list(delay_deque)
-    topic_stats = {}
-    
-    for record in records:
-        topic = record['topic']
-        group = record['name'].rsplit('_', 1)[0]  # Extract group name
-        
-        if group not in topic_stats:
-            topic_stats[group] = {'delays': [], 'seq_ids': set()}
-        
-        topic_stats[group]['delays'].append(record['delay'])
-        topic_stats[group]['seq_ids'].add(record['seq_id'])
-
-    # Calculate metrics
-    all_delays = [d for group in topic_stats.values() for d in group['delays']]
-    seq_ids = [s for group in topic_stats.values() for s in group['seq_ids']]
-    
-    if all_delays:
-        job_status[job_id].update({
-            'delay_count': len(all_delays),
-            'avg_delay': round(statistics.mean(all_delays), 2),
-            'min_delay': round(min(all_delays), 2),
-            'max_delay': round(max(all_delays), 2)
-        })
-    
-    # Packet loss calculation
-    if seq_ids:
-        min_seq = min(seq_ids)
-        max_seq = max(seq_ids)
-        expected = max_seq - min_seq + 1
-        actual = len(seq_ids)
-        loss_pct = 100.0 * (1 - actual / expected) if expected > 0 else 0.0
-        job_status[job_id]['packet_loss_pct'] = round(loss_pct, 2)
-    
-    job_status[job_id].update({
-        'throughput_mps': round(len(all_delays) / duration, 2),
+    # Save final job state
+    job_status[job_id] = {
+        **eval_results,
         'status': 'done',
-        'monitoring': 'done'
-    })
+        'monitoring': 'done',
+        'broker_name': broker_name,
+        'job_id': job_id,
+        'resource_csv': resource_csv
+    }
 
 @app.route('/run_tests', methods=['POST'])
 def run_tests():
