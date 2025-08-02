@@ -539,70 +539,83 @@
   });
 
   async function startEvaluation() {
-    // build the payload
-    const broker    = document.getElementById("brokerName").value.trim();
-    const port      = parseInt(document.getElementById("brokerPort").value, 10) || 1883;
+    const broker = document.getElementById("brokerName").value.trim();
+    const port = parseInt(document.getElementById("brokerPort").value, 10) || 1883;
+    const duration = parseInt(document.getElementById("evalDuration").value, 10) || 60;
+    const payloadSize = parseInt(document.getElementById("evalPayloadSize").value, 10) || 256;
+
     const payload = {
-      broker_name: document.getElementById("brokerName").value.trim(),
-      broker_port: parseInt(document.getElementById("brokerPort").value, 10) || 1883,
-      duration: parseInt(document.getElementById("evalDuration").value, 10) || 60,
-      payload_size: parseInt(document.getElementById("evalPayloadSize").value, 10) || 256,
-      max_clients: 100  // optional/future use
+      broker_name: broker,
+      broker_port: port,
+      duration: duration,
+      payload_size: payloadSize,
+      max_clients: 100 // optional
     };
 
-    // kick off tests
+    const modalEl = document.getElementById('progressModal');
+    const modal = new bootstrap.Modal(modalEl);
+    const txt = document.getElementById('progressText');
+    const bar = document.getElementById('progressBar');
+    modal.show();
+
     let job_id;
     try {
       const res = await fetch('/run_tests', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       job_id = json.job_id;
     } catch (err) {
-      return alert("Failed to start evaluation: " + err.message);
+      modal.hide();
+      alert("Failed to start evaluation: " + err.message);
+      return;
     }
 
-    // show progress modal
-    const modalEl = document.getElementById('progressModal');
-    const modal   = new bootstrap.Modal(modalEl);
-    const txt     = document.getElementById('progressText');
-    const bar     = document.getElementById('progressBar');
-    modal.show();
-
-    const steps  = ['step1','step2','step3'];
-    const labels = ['Pinger…','Availability…','Max‑clients…'];
     const params = new URLSearchParams(payload);
+    let percent = 0;
 
-    // poll every second
     const iv = setInterval(async () => {
-      const status = await (await fetch(`/status/${job_id}`)).json();
-      console.log(status);
-      const done   = steps.filter(s => status[s]==='done').length;
+      try {
+        const res = await fetch(`/status/${job_id}`);
+        const status = await res.json();
 
-      // update UI
-      txt.textContent   = labels[Math.min(done,2)];
-      bar.style.width   = (done/3*100)+'%';
-      bar.textContent   = `${done}/3`;
-
-      if (status.error || done===3) {
-        clearInterval(iv);
-        modal.hide();
-
-        if (done===3) {
-          // success → redirect
-          window.location = `/results/${broker}?job_id=${job_id}&${params}`;
-        } else {
-          // error state
+        if (status.error) {
+          clearInterval(iv);
           txt.textContent = 'Error!';
-          bar.className   = 'progress-bar bg-danger';
+          bar.className = 'progress-bar bg-danger';
+          bar.textContent = '❌ Failed';
+          modal.hide();
+          alert(status.error || "Evaluation failed");
+          return;
         }
+
+        if (status.status === 'done') {
+          clearInterval(iv);
+          txt.textContent = 'Completed!';
+          bar.style.width = '100%';
+          bar.textContent = '✅ Done';
+          setTimeout(() => {
+            window.location = `/results/${job_id}`;
+          }, 1000);
+        } else {
+          // Simulate smooth progress
+          percent = Math.min(percent + 2, 95);
+          txt.textContent = 'Running Evaluation…';
+          bar.style.width = `${percent}%`;
+          bar.textContent = `${percent}%`;
+        }
+      } catch (e) {
+        clearInterval(iv);
+        txt.textContent = 'Network error';
+        bar.className = 'progress-bar bg-danger';
+        modal.hide();
+        alert("Failed to poll status.");
       }
     }, 1000);
   }
-
 
   // async function toggleSimulation(action) {
   //     const statusEl = document.getElementById('simControlStatus');

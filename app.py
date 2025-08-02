@@ -466,9 +466,18 @@ def monitor_container_stats(container_id, csv_path, stop_event):
 # EVALUATION AND TESTING ROUTES
 # =============================================================================
 
+
+def get_docker_broker_names():
+    """Return a set of container names that are known brokers"""
+    return {'activemq', 'mosquitto', 'vernemq', 'emqx', 'hivemq', 'nanomq', 'rabbitmq'}
+
+
 def run_tests_in_background(job_id, args):
     broker_name = args.get('broker_name', 'localhost').lower()
     broker_port = int(args.get('broker_port', 1883))
+    # Determine MQTT connection host
+    mqtt_host = 'localhost' if broker_name in get_docker_broker_names() else broker_name
+
     duration = int(args.get('duration', 60))
 
     # Verify container exists
@@ -492,7 +501,7 @@ def run_tests_in_background(job_id, args):
 
     # Run evaluation (latency, throughput, availability)
     controller = EvaluationController(
-        broker_host=broker_name,
+        broker_host=mqtt_host,
         broker_port=broker_port,
         duration=duration,
         job_id=job_id
