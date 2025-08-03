@@ -209,7 +209,7 @@ def deploy_simulation():
                     "global.get('seq')[group]++;\n"
                     "msg.payload = {\n"
                     f"  ts_sent: Date.now(),\n"
-                    f"  seq_id: global.get('seq')[group],\n"
+                    f"  seq_id: global.get('seq')[topic],\n"
                     f"  data: 'X'.repeat({pub['payload_size']})\n"
                     "};\n"
                     "return msg;"
@@ -360,24 +360,41 @@ def control_simulation(action):
 # =============================================================================
 
 def start_delay_collector(broker_host, broker_port, delay_deque):
+    """Start MQTT client to collect delay measurements"""
     client = mqtt.Client(CallbackAPIVersion.VERSION2)
-    client.on_message = lambda cl, userdata, msg: on_message(cl, msg, delay_deque)
+    
+    def on_connect(client, userdata, flags, rc, properties=None):
+        if rc == 0:
+            print(f"✅ Delay collector connected to {broker_host}:{broker_port}")
+            client.subscribe("sim/stats/delay")
+            print("✅ Subscribed to sim/stats/delay")
+        else:
+            print(f"❌ Delay collector connection failed: {rc}")
+    
+    def on_message(client, userdata, msg):
+        try:
+            payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
+            payload = json.loads(payload_str)
+            payload['timestamp'] = time.time()
+            delay_deque.append(payload)
+            print(f"📨 Delay data received: {payload.get('delay', 'N/A')}ms from {payload.get('name', 'unknown')}")
+        except Exception as e:
+            print(f"❌ Delay parser error: {e}, payload: {msg.payload}")
+    
+    client.on_connect = on_connect
+    client.on_message = on_message
+    
     try:
         client.connect(broker_host, broker_port, 60)
-        client.subscribe("sim/stats/delay")
         client.loop_start()
+        print(f"🔄 Delay collector loop started for {broker_host}:{broker_port}")
         return client
     except Exception as e:
-        print(f"❌ Failed to connect to broker: {e}")
+        print(f"❌ Failed to connect delay collector: {e}")
         return None
 
-def on_message(client, msg, delay_deque):
-    try:
-        payload = json.loads(msg.payload.decode())
-        payload['timestamp'] = time.time()
-        delay_deque.append(payload)
-    except Exception as e:
-        print(f"[Delay Parser Error] {e}")
+# Start delay collector when app starts (UNCOMMENT AND FIX)
+delay_collector_client = None
 
 # Start delay collector in background thread
 # Thread(target=start_delay_collector, args=('localhost', 1883), daemon=True).start()
@@ -570,6 +587,7 @@ def results(job_id):
         stats=stats,
         resource_data=json.dumps(resource_data))
 
+
 # =============================================================================
 # MAIN ROUTES
 # =============================================================================
@@ -582,4 +600,15 @@ def index():
 if __name__ == '__main__':
     # Ensure results directory exists
     os.makedirs('results', exist_ok=True)
-    app.run(debug=True)
+    
+    # START THE DELAY COLLECTOR (THIS WAS MISSING!)
+    print("🚀 Starting delay collector...")
+    delay_collector_client = start_delay_collector('localhost', 1883, delay_data)
+    
+    if delay_collector_client:
+        print("✅ Delay collector started successfully")
+    else:
+        print("❌ WARNING: Delay collector failed to start!")
+    
+    print("🌐 Starting Flask app...")
+    app.run(debug=True, host='0.0.0.0', port=5000)

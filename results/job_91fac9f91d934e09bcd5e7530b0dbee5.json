@@ -1,0 +1,16 @@
+{
+  "job_id": "91fac9f91d934e09bcd5e7530b0dbee5",
+  "broker_name": "localhost",
+  "timestamp": "2025-08-03T00:35:18.331711",
+  "latency_count": 0,
+  "latency_processed_count": 0,
+  "latency_error_count": 0,
+  "throughput_throughput_mps": 0.0,
+  "availability_total_checks": 8,
+  "availability_failures": 0,
+  "availability_recoveries": 0,
+  "availability_downtime_events": 0,
+  "availability_avg_downtime_sec": 0.0,
+  "availability_mtbf_sec": 0.0,
+  "availability_mttr_sec": 0.0
+}
