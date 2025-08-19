@@ -26,7 +26,7 @@ class EvaluationController:
         self.availability_monitor = AvailabilityMonitor()
 
         # MQTT - Fixed client initialization
-        self.client = mqtt.Client(CallbackAPIVersion.VERSION2)
+        self.client = mqtt.Client(protocol=mqtt.MQTTv311)
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
@@ -44,7 +44,7 @@ class EvaluationController:
             print(f"❌ [Controller] Connection failed with code {rc}")
             self.connected = False
 
-    def on_disconnect(self, client, userdata, flags, rc, properties=None):
+    def on_disconnect(self, client, userdata, rc):
         print(f"🔌 [Controller] Disconnected (code: {rc})")
         self.connected = False
 

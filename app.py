@@ -50,17 +50,6 @@ def new_id():
     """Generate a new 8-character hex ID"""
     return uuid.uuid4().hex[:8]
 
-# Commented out broker reachability check due to Docker network conflicts
-# def check_broker_reachability(host, port, timeout=3):
-#     client = mqtt.Client()
-#     try:
-#         client.connect(host, port, keepalive=timeout)
-#         client.disconnect()
-#         return True
-#     except Exception as e:
-#         print(f"[BROKER CHECK] Failed to reach {host}:{port} - {e}")
-#         return False
-
 # =============================================================================
 # TOPIC MANAGEMENT ROUTES
 # =============================================================================
@@ -133,10 +122,6 @@ def deploy_simulation():
     broker_host = data.get("broker_name", "localhost")
     broker_port = int(data.get("broker_port", 1883))
 
-    # Broker reachability check is commented out due to Docker network conflicts
-    # if not check_broker_reachability(broker_host, broker_port):
-    #     return jsonify(error=f"Cannot connect to MQTT broker at {broker_host}:{broker_port}"), 400
-
     # Expand groups into individual instances
     pub_expander = GroupExpander(mode="publisher")
     pub_instances, pub_warnings = pub_expander.expand(publisher_groups)
@@ -204,12 +189,13 @@ def deploy_simulation():
                 "name": f"{pub['name']} Payload",
                 "func": (
                     "if (!global.get('seq')) global.set('seq', {});\n"
-                    "var group = msg.topic || 'default';\n"
+                    f"var group = '{pub['topic']}';\n"  # FIX: Use actual topic name
                     "if (!global.get('seq')[group]) global.get('seq')[group] = 0;\n"
                     "global.get('seq')[group]++;\n"
                     "msg.payload = {\n"
                     f"  ts_sent: Date.now(),\n"
-                    f"  seq_id: global.get('seq')[topic],\n"
+                    f"  seq_id: global.get('seq')[group],\n"  # FIX: Use group variable
+                    f"  name: '{pub['name']}',\n"  # ADD: Publisher name
                     f"  data: 'X'.repeat({pub['payload_size']})\n"
                     "};\n"
                     "return msg;"
@@ -262,10 +248,18 @@ def deploy_simulation():
                     "z": tab_id,
                     "name": f"{sub['name']} DelayCalc",
                     "func": (
-                        "if (!msg.payload.ts_sent) return null;\n"
+                        "// Check if payload is valid\n"
+                        "if (!msg.payload || typeof msg.payload !== 'object') {\n"
+                        "    node.warn('Invalid payload received: ' + JSON.stringify(msg.payload));\n"
+                        "    return null;\n"
+                        "}\n"
+                        "if (!msg.payload.ts_sent) {\n"
+                        "    node.warn('Missing ts_sent in payload');\n"
+                        "    return null;\n"
+                        "}\n"
                         "const now = Date.now();\n"
                         "const delay = now - msg.payload.ts_sent;\n"
-                        "return {\n"
+                        "const result = {\n"
                         "  topic: 'sim/stats/delay',\n"
                         "  payload: {\n"
                         f"    name: '{sub['name']}',\n"
@@ -273,9 +267,12 @@ def deploy_simulation():
                         "    delay: delay,\n"
                         "    seq_id: msg.payload.seq_id || null,\n"
                         "    ts_sent: msg.payload.ts_sent,\n"
-                        "    ts_recv: now\n"
+                        "    ts_recv: now,\n"
+                        "    publisher_name: msg.payload.name || 'unknown'\n"
                         "  }\n"
-                        "};"
+                        "};\n"
+                        "node.log('Delay calculated: ' + delay + 'ms for ' + msg.payload.name);\n"
+                        "return result;"
                     ),
                     "outputs": 1,
                     "noerr": 0,
@@ -291,9 +288,9 @@ def deploy_simulation():
                     "type": "mqtt out",
                     "z": tab_id,
                     "name": f"{sub['name']} ➤ sim/stats/delay",
-                    "topic": "",
+                    "topic": "sim/stats/delay",  # FIX: Set explicit topic
                     "qos": "0",
-                    "retain": False,
+                    "retain": "false",  # FIX: Use string "false"
                     "broker": broker_config_id,
                     "x": 530,
                     "y": y,
@@ -304,17 +301,21 @@ def deploy_simulation():
 
     # Deploy flows to Node-RED
     try:
+        print(f"🚀 Deploying {len(all_nodes)} nodes to Node-RED...")
         resp = requests.post(
             f'{NODE_RED_URL}/flows',
             headers={'Content-Type': 'application/json'},
             json=all_nodes,
-            timeout=10  # Add timeout
+            timeout=10
         )
         if resp.status_code == 204:
+            print("✅ Successfully deployed to Node-RED")
             return jsonify(ok=True, warnings=pub_warnings + sub_warnings)
         else:
+            print(f"❌ Node-RED deployment failed: {resp.status_code} - {resp.text}")
             return jsonify(error=f"Failed to deploy: {resp.text}"), 500
     except requests.RequestException as e:
+        print(f"❌ Node-RED connection failed: {str(e)}")
         return jsonify(error=f"Node-RED connection failed: {str(e)}"), 500
 
 # =============================================================================
@@ -361,7 +362,7 @@ def control_simulation(action):
 
 def start_delay_collector(broker_host, broker_port, delay_deque):
     """Start MQTT client to collect delay measurements"""
-    client = mqtt.Client(CallbackAPIVersion.VERSION2)
+    client = mqtt.Client(protocol=mqtt.MQTTv311, client_id="flask_delay_collector")
     
     def on_connect(client, userdata, flags, rc, properties=None):
         if rc == 0:
@@ -381,10 +382,15 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
         except Exception as e:
             print(f"❌ Delay parser error: {e}, payload: {msg.payload}")
     
+    def on_disconnect(client, userdata, rc):
+        print(f"🔌 [DelayCollector] Disconnected from broker (rc={rc})")
+    
     client.on_connect = on_connect
     client.on_message = on_message
+    client.on_disconnect = on_disconnect
     
     try:
+        print(f"🔗 Connecting delay collector to {broker_host}:{broker_port}")
         client.connect(broker_host, broker_port, 60)
         client.loop_start()
         print(f"🔄 Delay collector loop started for {broker_host}:{broker_port}")
@@ -393,11 +399,8 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
         print(f"❌ Failed to connect delay collector: {e}")
         return None
 
-# Start delay collector when app starts (UNCOMMENT AND FIX)
+# Global delay collector client
 delay_collector_client = None
-
-# Start delay collector in background thread
-# Thread(target=start_delay_collector, args=('localhost', 1883), daemon=True).start()
 
 @app.route('/api/metrics')
 def get_delay_metrics():
@@ -483,15 +486,14 @@ def monitor_container_stats(container_id, csv_path, stop_event):
 # EVALUATION AND TESTING ROUTES
 # =============================================================================
 
-
 def get_docker_broker_names():
     """Return a set of container names that are known brokers"""
     return {'activemq', 'mosquitto', 'vernemq', 'emqx', 'hivemq', 'nanomq', 'rabbitmq'}
 
-
 def run_tests_in_background(job_id, args):
     broker_name = args.get('broker_name', 'localhost').lower()
     broker_port = int(args.get('broker_port', 1883))
+    
     # Determine MQTT connection host
     mqtt_host = 'localhost' if broker_name in get_docker_broker_names() else broker_name
 
@@ -581,12 +583,11 @@ def results(job_id):
         with open(resource_csv) as f:
             resource_data = list(csv.DictReader(f))
     
-    return render_template ("results.html",
+    return render_template("results.html",
         broker_name=broker_name,
         job_id=job_id,
         stats=stats,
         resource_data=json.dumps(resource_data))
-
 
 # =============================================================================
 # MAIN ROUTES
@@ -601,7 +602,7 @@ if __name__ == '__main__':
     # Ensure results directory exists
     os.makedirs('results', exist_ok=True)
     
-    # START THE DELAY COLLECTOR (THIS WAS MISSING!)
+    # START THE DELAY COLLECTOR
     print("🚀 Starting delay collector...")
     delay_collector_client = start_delay_collector('localhost', 1883, delay_data)
     
