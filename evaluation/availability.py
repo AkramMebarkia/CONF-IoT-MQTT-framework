@@ -22,6 +22,7 @@ class AvailabilityMonitor:
             return False
 
     def monitor(self, broker_host, broker_port, duration):
+        print(f"🔍 [Availability] Starting monitoring of {broker_host}:{broker_port} for {duration}s")
         start_time = time.time()
         consecutive_failures = 0
         failure_start = None
@@ -34,7 +35,9 @@ class AvailabilityMonitor:
                 if consecutive_failures >= self.failure_threshold and failure_start:
                     recovery_time = time.time()
                     self.recoveries.append(recovery_time)
-                    self.downtime_events.append(recovery_time - failure_start)
+                    downtime = recovery_time - failure_start
+                    self.downtime_events.append(downtime)
+                    print(f"✅ [Availability] Broker recovered after {downtime:.2f}s downtime")
                     failure_start = None
                 consecutive_failures = 0
             else:
@@ -43,8 +46,11 @@ class AvailabilityMonitor:
                 if consecutive_failures == self.failure_threshold:
                     failure_start = time.time()
                     self.failures.append(failure_start)
+                    print(f"❌ [Availability] Broker failure detected at check #{self.total_checks}")
 
             time.sleep(self.check_interval)
+        
+        print(f"✅ [Availability] Monitoring complete. Total checks: {self.total_checks}, Failed: {self.failed_checks}")
 
     def get_stats(self):
         return {

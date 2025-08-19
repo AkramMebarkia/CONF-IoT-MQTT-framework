@@ -2,61 +2,365 @@
 <html>
 <head>
   <title>Simulation Results - {{ broker_name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .metric-card {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #0066cc;
+    }
+    .metric-label {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin-bottom: 30px;
+    }
+    .status-good { color: #28a745; }
+    .status-warning { color: #ffc107; }
+    .status-bad { color: #dc3545; }
+  </style>
 </head>
-<body class="p-4">
-  <h2>📊 Results for <code>{{ broker_name }}</code></h2>
+<body>
+  <div class="container py-4">
+    <div class="row mb-4">
+      <div class="col">
+        <h1>📊 Evaluation Results</h1>
+        <h3 class="text-muted">Broker: <code>{{ broker_name }}</code></h3>
+        <p class="text-muted">Job ID: {{ job_id }}</p>
+      </div>
+    </div>
 
-  <h4>🧪 Evaluation Metrics</h4>
-  <ul>
-    <li><strong>Total Messages:</strong> {{ stats.latency_count }}</li>
-    <li><strong>Average Delay:</strong> {{ stats.latency_avg_delay }} ms</li>
-    <li><strong>Min Delay:</strong> {{ stats.latency_min_delay }} ms</li>
-    <li><strong>Max Delay:</strong> {{ stats.latency_max_delay }} ms</li>
-    <li><strong>Jitter:</strong> {{ stats.latency_jitter }} ms</li>
-    <li><strong>Throughput:</strong> {{ stats.throughput_throughput_mps }} messages/sec</li>
-  </ul>
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="metric-card text-center">
+          <div class="metric-value">{{ stats.latency_count or 0 }}</div>
+          <div class="metric-label">Total Messages</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="metric-card text-center">
+          <div class="metric-value">{{ stats.latency_avg_delay or 0 }}ms</div>
+          <div class="metric-label">Average Latency</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="metric-card text-center">
+          <div class="metric-value">{{ stats.throughput_throughput_mps or 0 }}</div>
+          <div class="metric-label">Messages/sec</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="metric-card text-center">
+          <div class="metric-value {% if stats.availability_failures == 0 %}status-good{% else %}status-bad{% endif %}">
+            {{ stats.availability_failures or 0 }}
+          </div>
+          <div class="metric-label">Failures</div>
+        </div>
+      </div>
+    </div>
 
-  <h4>📶 Availability</h4>
-  <ul>
-    <li><strong>Availability Checks:</strong> {{ stats.availability_total_checks }}</li>
-    <li><strong>Failures:</strong> {{ stats.availability_failures }}</li>
-    <li><strong>Recoveries:</strong> {{ stats.availability_recoveries }}</li>
-    <li><strong>Downtime Events:</strong> {{ stats.availability_downtime_events }}</li>
-    <li><strong>Avg Downtime:</strong> {{ stats.availability_avg_downtime_sec }} s</li>
-    <li><strong>MTBF:</strong> {{ stats.availability_mtbf_sec }} s</li>
-    <li><strong>MTTR:</strong> {{ stats.availability_mttr_sec }} s</li>
-  </ul>
+    <!-- Detailed Metrics -->
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">🎯 Latency Metrics</h5>
+          </div>
+          <div class="card-body">
+            <table class="table table-sm">
+              <tr>
+                <td>Messages Processed</td>
+                <td class="text-end"><strong>{{ stats.latency_processed_count or 0 }}</strong></td>
+              </tr>
+              <tr>
+                <td>Average Delay</td>
+                <td class="text-end"><strong>{{ stats.latency_avg_delay or 0 }} ms</strong></td>
+              </tr>
+              <tr>
+                <td>Min / Max Delay</td>
+                <td class="text-end"><strong>{{ stats.latency_min_delay or 0 }} / {{ stats.latency_max_delay or 0 }} ms</strong></td>
+              </tr>
+              <tr>
+                <td>Jitter (StdDev)</td>
+                <td class="text-end"><strong>{{ stats.latency_jitter or 0 }} ms</strong></td>
+              </tr>
+              <tr>
+                <td>50th Percentile</td>
+                <td class="text-end"><strong>{{ stats.latency_p50 or 0 }} ms</strong></td>
+              </tr>
+              <tr>
+                <td>95th Percentile</td>
+                <td class="text-end"><strong>{{ stats.latency_p95 or 0 }} ms</strong></td>
+              </tr>
+              <tr>
+                <td>99th Percentile</td>
+                <td class="text-end"><strong>{{ stats.latency_p99 or 0 }} ms</strong></td>
+              </tr>
+              <tr>
+                <td>Error Rate</td>
+                <td class="text-end"><strong>{{ stats.latency_error_rate or 0 }}%</strong></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
 
-  <h4>📈 Resource Usage (CPU/RAM)</h4>
-  <canvas id="cpuChart" width="600" height="200"></canvas>
-  <canvas id="ramChart" width="600" height="200"></canvas>
+      <div class="col-md-6">
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">📶 Availability Metrics</h5>
+          </div>
+          <div class="card-body">
+            <table class="table table-sm">
+              <tr>
+                <td>Total Checks</td>
+                <td class="text-end"><strong>{{ stats.availability_total_checks or 0 }}</strong></td>
+              </tr>
+              <tr>
+                <td>Failures</td>
+                <td class="text-end"><strong class="{% if stats.availability_failures == 0 %}status-good{% else %}status-bad{% endif %}">{{ stats.availability_failures or 0 }}</strong></td>
+              </tr>
+              <tr>
+                <td>Recoveries</td>
+                <td class="text-end"><strong>{{ stats.availability_recoveries or 0 }}</strong></td>
+              </tr>
+              <tr>
+                <td>Downtime Events</td>
+                <td class="text-end"><strong>{{ stats.availability_downtime_events or 0 }}</strong></td>
+              </tr>
+              <tr>
+                <td>Avg Downtime</td>
+                <td class="text-end"><strong>{{ stats.availability_avg_downtime_sec or 0 }} s</strong></td>
+              </tr>
+              <tr>
+                <td>MTBF</td>
+                <td class="text-end"><strong>{{ stats.availability_mtbf_sec or 0 }} s</strong></td>
+              </tr>
+              <tr>
+                <td>MTTR</td>
+                <td class="text-end"><strong>{{ stats.availability_mttr_sec or 0 }} s</strong></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resource Usage Charts -->
+    <div class="row">
+      <div class="col-12">
+        <h4 class="mb-3">📈 Resource Usage</h4>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">CPU Usage (%)</div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="cpuChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">Memory Usage (%)</div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="ramChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">Network I/O (MB/s)</div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="netChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">Disk I/O (MB/s)</div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="diskChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warning if no data -->
+    {% if stats.latency_count == 0 %}
+    <div class="alert alert-warning mt-4">
+      <h5>⚠️ No Messages Received</h5>
+      <p>The evaluation completed but no messages were captured. Possible causes:</p>
+      <ul>
+        <li>Publishers not deployed or not running</li>
+        <li>Subscribers not properly configured</li>
+        <li>Topic mismatch between publishers and subscribers</li>
+        <li>Network connectivity issues</li>
+        <li>Broker not accepting connections</li>
+      </ul>
+      <p>Please verify your simulation deployment and try again.</p>
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+      <a href="/" class="btn btn-primary">← Back to Dashboard</a>
+      <button class="btn btn-secondary" onclick="window.print()">🖨️ Print Report</button>
+    </div>
+  </div>
 
   <script>
     const resourceData = {{ resource_data | safe }};
-    const labels = resourceData.map(d => new Date(d.timestamp).toLocaleTimeString());
-
-    const cpu = resourceData.map(d => parseFloat(d.cpu_percent));
-    const mem = resourceData.map(d => {
-      const used = parseFloat(d.mem_usage);
-      const limit = parseFloat(d.mem_limit);
-      return limit ? (used / limit * 100).toFixed(2) : 0;
+    
+    // Prepare data
+    const labels = resourceData.map(d => {
+      const date = new Date(d.timestamp);
+      return date.toLocaleTimeString();
     });
 
+    const cpu = resourceData.map(d => parseFloat(d.cpu_percent) || 0);
+    const mem = resourceData.map(d => {
+      const used = parseFloat(d.mem_usage) || 0;
+      const limit = parseFloat(d.mem_limit) || 1;
+      return limit > 0 ? (used / limit * 100).toFixed(2) : 0;
+    });
+
+    // Calculate network rates (MB/s)
+    const netRx = [];
+    const netTx = [];
+    for (let i = 1; i < resourceData.length; i++) {
+      const timeDiff = (new Date(resourceData[i].timestamp) - new Date(resourceData[i-1].timestamp)) / 1000;
+      const rxDiff = (parseFloat(resourceData[i].net_rx) - parseFloat(resourceData[i-1].net_rx)) / 1024 / 1024;
+      const txDiff = (parseFloat(resourceData[i].net_tx) - parseFloat(resourceData[i-1].net_tx)) / 1024 / 1024;
+      netRx.push((rxDiff / timeDiff).toFixed(2));
+      netTx.push((txDiff / timeDiff).toFixed(2));
+    }
+
+    // Calculate disk rates (MB/s)
+    const diskRead = [];
+    const diskWrite = [];
+    for (let i = 1; i < resourceData.length; i++) {
+      const timeDiff = (new Date(resourceData[i].timestamp) - new Date(resourceData[i-1].timestamp)) / 1000;
+      const readDiff = (parseFloat(resourceData[i].block_read) - parseFloat(resourceData[i-1].block_read)) / 1024 / 1024;
+      const writeDiff = (parseFloat(resourceData[i].block_write) - parseFloat(resourceData[i-1].block_write)) / 1024 / 1024;
+      diskRead.push((readDiff / timeDiff).toFixed(2));
+      diskWrite.push((writeDiff / timeDiff).toFixed(2));
+    }
+
+    // Chart options
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    };
+
+    // CPU Chart
     new Chart(document.getElementById("cpuChart"), {
       type: 'line',
       data: {
-        labels,
-        datasets: [{ label: 'CPU %', data: cpu }]
-      }
+        labels: labels,
+        datasets: [{
+          label: 'CPU %',
+          data: cpu,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          tension: 0.1
+        }]
+      },
+      options: chartOptions
     });
 
+    // Memory Chart
     new Chart(document.getElementById("ramChart"), {
       type: 'line',
       data: {
-        labels,
-        datasets: [{ label: 'Memory Usage %', data: mem }]
-      }
+        labels: labels,
+        datasets: [{
+          label: 'Memory %',
+          data: mem,
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          tension: 0.1
+        }]
+      },
+      options: chartOptions
+    });
+
+    // Network Chart
+    new Chart(document.getElementById("netChart"), {
+      type: 'line',
+      data: {
+        labels: labels.slice(1),
+        datasets: [{
+          label: 'RX (MB/s)',
+          data: netRx,
+          borderColor: 'rgb(54, 162, 235)',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          tension: 0.1
+        }, {
+          label: 'TX (MB/s)',
+          data: netTx,
+          borderColor: 'rgb(255, 206, 86)',
+          backgroundColor: 'rgba(255, 206, 86, 0.2)',
+          tension: 0.1
+        }]
+      },
+      options: chartOptions
+    });
+
+    // Disk Chart
+    new Chart(document.getElementById("diskChart"), {
+      type: 'line',
+      data: {
+        labels: labels.slice(1),
+        datasets: [{
+          label: 'Read (MB/s)',
+          data: diskRead,
+          borderColor: 'rgb(153, 102, 255)',
+          backgroundColor: 'rgba(153, 102, 255, 0.2)',
+          tension: 0.1
+        }, {
+          label: 'Write (MB/s)',
+          data: diskWrite,
+          borderColor: 'rgb(255, 159, 64)',
+          backgroundColor: 'rgba(255, 159, 64, 0.2)',
+          tension: 0.1
+        }]
+      },
+      options: chartOptions
     });
   </script>
 </body>

@@ -616,30 +616,6 @@
       }
     }, 1000);
   }
-
-  // async function toggleSimulation(action) {
-  //     const statusEl = document.getElementById('simControlStatus');
-  //     statusEl.innerText = `${action === 'start' ? 'Starting' : 'Stopping'} simulation...`;
-
-  //     try {
-  //       const res = await fetch(`/simulation/${action}`, { method: 'POST' });
-  //       const data = await res.json();
-
-  //       if (res.ok) {
-  //         statusEl.innerText = `✅ Simulation ${action}ed`;
-  //       } else {
-  //         statusEl.innerText = `❌ Error: ${data.error}`;
-  //       }
-  //     } catch (err) {
-  //       statusEl.innerText = `❌ Exception: ${err.message}`;
-  //     }
-  // }
-
-  // window.addEventListener('load', () => {
-  //   createChart();
-  //   setInterval(pollMetrics, 2000);
-  // });
-
 </script>
 
 <div class="modal fade" id="progressModal" tabindex="-1">
