@@ -137,7 +137,7 @@ def deploy_simulation():
     all_nodes.append({
         "id": tab_id,
         "type": "tab",
-        "label": "Sim-AutoFlow",
+        "label": f"Sim-{tab_id[:6]}",
         "disabled": False,
         "info": ""
     })
@@ -157,6 +157,11 @@ def deploy_simulation():
         "cleansession": True
     })
 
+    # Collect all topics that are actually being published to
+    published_topics = set()
+    for pub in pub_instances:
+        published_topics.add(pub["topic"])
+
     # Add publisher nodes
     y = 80
     for pub in pub_instances:
@@ -170,7 +175,7 @@ def deploy_simulation():
                 "type": "inject",
                 "z": tab_id,
                 "name": pub["name"],
-                "props": [{"p":"payload"}],
+                "props": [{"p":"payload"}, {"p":"topic", "vt":"str"}],
                 "repeat": str(pub.get("interval", 1.0)),
                 "once": True,
                 "onceDelay": 0.1,
@@ -187,27 +192,34 @@ def deploy_simulation():
                 "z": tab_id,
                 "name": f"{pub['name']} Payload",
                 "func": (
+                    "// Initialize sequence counter\n"
                     "if (!global.get('seq')) global.set('seq', {});\n"
-                    f"var group = '{pub['topic']}';\n"
-                    "if (!global.get('seq')[group]) global.get('seq')[group] = 0;\n"
-                    "global.get('seq')[group]++;\n"
+                    f"var topic = '{pub['topic']}';\n"
+                    "if (!global.get('seq')[topic]) global.get('seq')[topic] = 0;\n"
+                    "global.get('seq')[topic]++;\n"
                     "\n"
                     "// Create payload with timestamp for latency measurement\n"
                     "msg.payload = {\n"
                     "  ts_sent: Date.now(),\n"
-                    "  seq_id: global.get('seq')[group],\n"
+                    "  seq_id: global.get('seq')[topic],\n"
                     f"  name: '{pub['name']}',\n"
                     f"  topic: '{pub['topic']}',\n"
                     f"  data: 'X'.repeat({pub.get('payload_size', 256)})\n"
                     "};\n"
                     "\n"
+                    "// Set topic\n"
                     f"msg.topic = '{pub['topic']}';\n"
                     "\n"
                     "// Debug logging\n"
-                    f"node.log('Publishing to {pub['topic']}: ' + JSON.stringify(msg.payload));\n"
+                    "node.log('Publishing #' + global.get('seq')[topic] + ' to ' + topic);\n"
                     "return msg;"
                 ),
                 "outputs": 1,
+                "timeout": 0,
+                "noerr": 0,
+                "initialize": "",
+                "finalize": "",
+                "libs": [],
                 "x": 340,
                 "y": y,
                 "wires": [[mqtt_id]]
@@ -220,6 +232,11 @@ def deploy_simulation():
                 "topic": pub["topic"],
                 "qos": str(pub.get("qos", 1)),
                 "retain": str(pub.get("retain", False)).lower(),
+                "respTopic": "",
+                "contentType": "",
+                "userProps": "",
+                "correl": "",
+                "expiry": "",
                 "broker": broker_config_id,
                 "x": 560,
                 "y": y,
@@ -228,9 +245,16 @@ def deploy_simulation():
         ])
         y += 60
 
-    # Add subscriber nodes
+    # Add subscriber nodes - ONLY subscribe to topics that are actually published
     for sub in sub_instances:
-        for topic in sub["topics"]:
+        # Filter topics to only those that are actually being published
+        valid_topics = [t for t in sub["topics"] if t in published_topics]
+        
+        if not valid_topics:
+            print(f"⚠️  Warning: Subscriber {sub['name']} has no valid topics to subscribe to")
+            continue
+            
+        for topic in valid_topics:
             mqtt_in_id = new_id()
             delay_func_id = new_id()
             mqtt_out_id = new_id()
@@ -245,6 +269,10 @@ def deploy_simulation():
                     "qos": str(sub.get("qos", 1)),
                     "datatype": "json",
                     "broker": broker_config_id,
+                    "nl": False,
+                    "rap": True,
+                    "rh": 0,
+                    "inputs": 0,
                     "x": 100,
                     "y": y,
                     "wires": [[delay_func_id]]
@@ -255,28 +283,18 @@ def deploy_simulation():
                     "z": tab_id,
                     "name": f"{sub['name']} DelayCalc",
                     "func": (
-                        "// Enhanced payload validation\n"
+                        "// Calculate message delay\n"
                         "try {\n"
                         "  var payload = msg.payload;\n"
                         "  \n"
-                        "  // Handle string payload\n"
-                        "  if (typeof payload === 'string') {\n"
-                        "    try {\n"
-                        "      payload = JSON.parse(payload);\n"
-                        "    } catch (e) {\n"
-                        "      node.warn('Failed to parse JSON payload: ' + payload);\n"
-                        "      return null;\n"
-                        "    }\n"
-                        "  }\n"
-                        "  \n"
-                        "  // Validate payload structure\n"
+                        "  // Validate payload\n"
                         "  if (!payload || typeof payload !== 'object') {\n"
-                        "    node.warn('Invalid payload type: ' + typeof payload);\n"
+                        "    node.error('Invalid payload type: ' + typeof payload);\n"
                         "    return null;\n"
                         "  }\n"
                         "  \n"
                         "  if (!payload.ts_sent) {\n"
-                        "    node.warn('Missing ts_sent in payload. Keys: ' + Object.keys(payload).join(', '));\n"
+                        "    node.error('Missing ts_sent in payload');\n"
                         "    return null;\n"
                         "  }\n"
                         "  \n"
@@ -284,14 +302,14 @@ def deploy_simulation():
                         "  var now = Date.now();\n"
                         "  var delay = now - payload.ts_sent;\n"
                         "  \n"
-                        "  // Create standardized output for evaluation controller\n"
-                        "  var result = {\n"
+                        "  // Create output message\n"
+                        "  var output = {\n"
                         "    topic: 'sim/stats/delay',\n"
                         "    payload: {\n"
                         f"      name: '{sub['name']}',\n"
                         f"      subscriber_topic: '{topic}',\n"
                         "      delay: delay,\n"
-                        "      seq_id: payload.seq_id || null,\n"
+                        "      seq_id: payload.seq_id || 0,\n"
                         "      ts_sent: payload.ts_sent,\n"
                         "      ts_recv: now,\n"
                         "      publisher_name: payload.name || 'unknown',\n"
@@ -299,21 +317,22 @@ def deploy_simulation():
                         "    }\n"
                         "  };\n"
                         "  \n"
-                        "  node.log('✅ Delay calculated: ' + delay + 'ms for ' + payload.name + ' → ' + result.payload.name);\n"
-                        "  return result;\n"
+                        "  // Log success\n"
+                        "  node.log('Delay ' + delay + 'ms for seq ' + payload.seq_id + ' from ' + payload.name);\n"
+                        "  return output;\n"
                         "  \n"
                         "} catch (error) {\n"
-                        "  node.error('Delay calculation error: ' + error.message);\n"
-                        "  node.warn('Problematic payload: ' + JSON.stringify(msg.payload));\n"
+                        "  node.error('Error calculating delay: ' + error.message);\n"
                         "  return null;\n"
                         "}"
                     ),
                     "outputs": 1,
+                    "timeout": 0,
                     "noerr": 0,
                     "initialize": "",
                     "finalize": "",
                     "libs": [],
-                    "x": 300,
+                    "x": 320,
                     "y": y,
                     "wires": [[mqtt_out_id]]
                 },
@@ -321,35 +340,96 @@ def deploy_simulation():
                     "id": mqtt_out_id,
                     "type": "mqtt out",
                     "z": tab_id,
-                    "name": f"Stats → sim/stats/delay",
+                    "name": f"→ sim/stats/delay",
                     "topic": "sim/stats/delay",
                     "qos": "1",
                     "retain": "false",
+                    "respTopic": "",
+                    "contentType": "",
+                    "userProps": "",
+                    "correl": "",
+                    "expiry": "",
                     "broker": broker_config_id,
-                    "x": 530,
+                    "x": 550,
                     "y": y,
                     "wires": []
                 }
             ])
             y += 80
 
+    # Add a debug node to monitor sim/stats/delay
+    debug_id = new_id()
+    all_nodes.append({
+        "id": debug_id,
+        "type": "debug",
+        "z": tab_id,
+        "name": "Stats Monitor",
+        "active": True,
+        "tosidebar": True,
+        "console": False,
+        "tostatus": True,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.delay",
+        "statusType": "msg",
+        "x": 750,
+        "y": 60,
+        "wires": []
+    })
+
+    # Add MQTT in node for debugging
+    debug_mqtt_id = new_id()
+    all_nodes.append({
+        "id": debug_mqtt_id,
+        "type": "mqtt in",
+        "z": tab_id,
+        "name": "Monitor sim/stats/delay",
+        "topic": "sim/stats/delay",
+        "qos": "1",
+        "datatype": "json",
+        "broker": broker_config_id,
+        "nl": False,
+        "rap": True,
+        "rh": 0,
+        "inputs": 0,
+        "x": 540,
+        "y": 60,
+        "wires": [[debug_id]]
+    })
+
     # Deploy flows to Node-RED
     try:
         print(f"🚀 Deploying {len(all_nodes)} nodes to Node-RED...")
+        print(f"   Published topics: {published_topics}")
+        print(f"   Valid subscriber connections: {sum(len([t for t in sub['topics'] if t in published_topics]) for sub in sub_instances)}")
+        
         resp = requests.post(
             f'{NODE_RED_URL}/flows',
-            headers={'Content-Type': 'application/json'},
+            headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'full'},
             json=all_nodes,
             timeout=30
         )
+        
         if resp.status_code == 204:
             print("✅ Successfully deployed to Node-RED")
             print(f"   📊 Publishers: {len(pub_instances)}")
             print(f"   📊 Subscribers: {len(sub_instances)}")
-            return jsonify(ok=True, warnings=pub_warnings + sub_warnings)
+            print(f"   📊 Topics: {len(published_topics)}")
+            
+            # Add warnings about topic mismatches
+            all_warnings = pub_warnings + sub_warnings
+            
+            # Check for subscribers with no matching publishers
+            for sub in sub_instances:
+                unmatched = [t for t in sub['topics'] if t not in published_topics]
+                if unmatched:
+                    all_warnings.append(f"Subscriber '{sub['name']}' is trying to listen to non-existent topics: {unmatched}")
+            
+            return jsonify(ok=True, warnings=all_warnings)
         else:
             print(f"❌ Node-RED deployment failed: {resp.status_code} - {resp.text}")
             return jsonify(error=f"Failed to deploy: {resp.text}"), 500
+            
     except requests.RequestException as e:
         print(f"❌ Node-RED connection failed: {str(e)}")
         return jsonify(error=f"Node-RED connection failed: {str(e)}"), 500

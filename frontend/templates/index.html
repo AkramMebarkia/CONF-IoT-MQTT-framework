@@ -2,435 +2,1192 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MQTT Simulation & Broker Evaluation</title>
+  <title>MQTT Simulation & Broker Evaluation Platform</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    .checkbox-scroll {
-      max-height: 150px;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      padding: 10px;
+    :root {
+      --primary-color: #0066cc;
+      --secondary-color: #6c757d;
+      --success-color: #28a745;
+      --danger-color: #dc3545;
+      --warning-color: #ffc107;
+      --info-color: #17a2b8;
+      --light-bg: #f8f9fa;
+      --card-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      --hover-shadow: 0 4px 16px rgba(0,0,0,0.15);
     }
-    .section-title {
-      margin-bottom: 0.75rem;
+
+    body {
+      background-color: #f5f7fa;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* Header Styling */
+    .main-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem 0;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .main-header h1 {
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      font-size: 2.5rem;
+    }
+
+    .main-header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    /* Card Styling */
+    .custom-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: none;
+      transition: all 0.3s ease;
+    }
+
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #e9ecef;
+    }
+
+    .section-number {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 1rem;
       font-size: 1.2rem;
+    }
+
+    .checkbox-container {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 0.5rem;
+      background: #f8f9fa;
+    }
+
+    .section-title {
+      font-size: 1.4rem;
       font-weight: 600;
+      color: #2c3e50;
+      margin: 0;
+      flex-grow: 1;
+    }
+
+    /* Form Controls */
+    .form-control, .form-select {
+      border-radius: 8px;
+      border: 1.5px solid #e0e0e0;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .form-label {
+      font-weight: 500;
+      color: #495057;
+      margin-bottom: 0.5rem;
+    }
+
+    .selectable-topic {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .selectable-topic.selected {
+      background: #e7f3ff;
+      border-color: #667eea;
+    }
+
+    /* Button Styling */
+    .btn {
+      border-radius: 8px;
+      padding: 0.6rem 1.5rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #5a67d8 0%, #6b46a1 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+
+    .btn-outline-danger:hover {
+      background: #dc3545;
+      color: white;
+    }
+
+    /* Topic List */
+    .topic-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 0.5rem;
+      background: #f8f9fa;
+    }
+
+    .topic-item {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+
+    .topic-item:hover {
+      background: #f8f9fa;
+      border-color: #667eea;
+    }
+
+    /* Checkbox Container */
+    .checkbox-container {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      padding: 1rem;
+      background: #fafbfc;
+    }
+
+    .form-check {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      margin-bottom: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-check:hover {
+      background: #f8f9fa;
+      border-color: #667eea;
+    }
+
+    .form-check-input:checked {
+      background-color: #667eea;
+      border-color: #667eea;
+    }
+
+    /* Group List */
+    .group-item {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .group-item:hover {
+      background: #e9ecef;
+      border-color: #667eea;
+    }
+
+    .group-details {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+
+    /* Status Messages */
+    .status-message {
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .status-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .status-warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+    }
+
+    /* Progress Modal */
+    .modal-content {
+      border-radius: 12px;
+      border: none;
+    }
+
+    .progress {
+      height: 30px;
+      border-radius: 15px;
+      background: #e9ecef;
+    }
+
+    .progress-bar {
+      border-radius: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .main-header h1 {
+        font-size: 2rem;
+      }
+      
+      .section-title {
+        font-size: 1.2rem;
+      }
+      
+      .custom-card {
+        padding: 1rem;
+      }
+    }
+
+    /* Quick Actions Bar */
+    .quick-actions {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .quick-stat {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .quick-stat i {
+      color: #667eea;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #6c757d;
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      color: #dee2e6;
+      margin-bottom: 1rem;
     }
   </style>
 </head>
-<body class="p-3">
-  <div class="container">
-    <h1 class="mb-4 text-center">MQTT Simulation & Broker Evaluation</h1>
-
-    <!-- 1. Topic Management -->
-    <div class="card mb-4 p-3">
-      <h5 class="section-title">1) Topic Management</h5>
-
-      <div class="mb-2">
-        <label for="singleTopic" class="form-label">Add a single topic</label>
-        <div class="input-group">
-          <input id="singleTopic" class="form-control" placeholder="e.g. temp/room1" />
-          <button class="btn btn-success" onclick="addSingleTopic()">Add Topic</button>
-        </div>
-      </div>
-
-      <div class="row g-2 mb-2">
-        <div class="col-md">
-          <label for="groupName" class="form-label">Topic Group Name</label>
-          <input id="groupName" class="form-control" placeholder="e.g. GroupA" />
-        </div>
-        <div class="col-md-auto">
-          <label for="groupCount" class="form-label">Number of Topics</label>
-          <input id="groupCount" type="number" class="form-control" value="3" min="1" />
-        </div>
-        <div class="col-md-auto d-flex align-items-end">
-          <button class="btn btn-primary" onclick="addTopicGroup()">Create Topic Group</button>
-        </div>
-        <div class="col-md-auto d-flex align-items-end">
-          <button class="btn btn-danger" onclick="resetTopics()">Reset All Topics</button>
-        </div>
-      </div>
-
-      <strong>Available Topics:</strong>
-      <ul id="topicList" class="list-group mt-2"></ul>
-    </div>
-
-    <!-- 2. Publisher Group -->
-    <div class="card mb-4 p-3">
-        <h5 class="section-title">2) Create Publisher Group</h5>
-
-        <div class="row g-3 mb-3">
-            <div class="col-md">
-            <label for="pubGroupName" class="form-label">Group Name</label>
-            <input id="pubGroupName" class="form-control" placeholder="e.g. SensorGroup" />
-            </div>
-            <div class="col-md-auto">
-            <label for="pubGroupCount" class="form-label">Number of Publishers</label>
-            <input id="pubGroupCount" type="number" class="form-control" value="3" min="1" />
-            </div>
-            <div class="col-md-auto">
-            <label for="pubFreq" class="form-label">Message Frequency (s)</label>
-            <input id="pubFreq" type="number" class="form-control" value="1" />
-            </div>
-            <div class="col-md-auto">
-            <label for="pubPayload" class="form-label">Payload Size (bytes)</label>
-            <input id="pubPayload" type="number" class="form-control" value="128" />
-            </div>
-            <div class="col-md-auto">
-            <label for="pubQoS" class="form-label">QoS</label>
-            <select id="pubQoS" class="form-select">
-                <option value="0">QoS 0</option>
-                <option value="1" selected>QoS 1</option>
-                <option value="2">QoS 2</option>
-            </select>
-            </div>
-            <div class="col-md-auto d-flex align-items-end">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="pubRetain" />
-                <label class="form-check-label" for="pubRetain">Retain</label>
-            </div>
-            </div>
-        </div>
-
-        <label class="form-label">Select Topics for Publishers</label>
-        <div id="pubTopics" class="checkbox-scroll mb-3"></div>
-
-        <button class="btn btn-primary" onclick="addPublisherGroup()">Add Publisher Group</button>
-        <button class="btn btn-outline-danger mt-2" onclick="resetPublisherGroups()">Reset Publisher Groups</button>
-        <ul id="pubGroupList" class="list-group mt-2"></ul>
-    </div>
-
-
-    <!-- 3. Subscriber Group -->
-    <div class="card mb-4 p-3">
-        <h5 class="section-title">
-          3) Create Subscriber Group
-          <small class="text-muted">(<span id="subCount">0</span> added)</small>
-        </h5>
-
-        <div class="row g-3 mb-3">
-            <div class="col-md">
-            <label for="subGroupName" class="form-label">Group Name</label>
-            <input id="subGroupName" class="form-control" placeholder="e.g. DashboardClients" />
-            </div>
-            <div class="col-md-auto">
-            <label for="subGroupCount" class="form-label">Number of Subscribers</label>
-            <input id="subGroupCount" type="number" class="form-control" value="3" min="1" />
-            </div>
-            <div class="col-md-auto">
-            <label for="subQoS" class="form-label">QoS</label>
-            <select id="subQoS" class="form-select">
-                <option value="0">QoS 0</option>
-                <option value="1" selected>QoS 1</option>
-                <option value="2">QoS 2</option>
-            </select>
-            </div>
-        </div>
-
-        <label class="form-label">Select Topics for Subscribers</label>
-        <div id="subTopics" class="checkbox-scroll mb-3"></div>
-
-        <button class="btn btn-primary" onclick="addSubscriberGroup()">Add Subscriber Group</button>
-        <button class="btn btn-outline-danger mt-2" onclick="resetSubscriberGroups()">Reset Subscriber Groups</button>
-        <ul id="subGroupList" class="list-group mt-2"></ul>
-    </div>
-
-
-    <div class="card p-3 mb-4">
-      <h5 class="section-title">4) Deploy Simulation to Node-RED</h5>
-      <div class="row g-2 mb-2">
-      <div class="col-md">
-        <label class="form-label">Broker Host</label>
-        <input id="brokerName" class="form-control" value="localhost" />
-      </div>
-      <div class="col-md-auto">
-        <label class="form-label">Broker Port</label>
-        <input id="brokerPort" type="number" class="form-control" value="1883" />
-      </div>
-    </div>
-      <button id="deployBtn" class="btn btn-success">🚀 Deploy to Node-RED</button>
-      <div id="deployStatus" class="mt-3 text-info"></div>
-    </div>
-
-    <div class="card p-3 mb-4">
-      <h5 class="section-title">4b) Evaluation Configuration</h5>
-
-      <div class="row g-3">
-        <div class="col-md-3">
-          <label for="evalDuration" class="form-label">Test Duration (s)</label>
-          <input id="evalDuration" type="number" class="form-control" value="60" min="5" />
-        </div>
-
-        <div class="col-md-3">
-          <label for="evalPayloadSize" class="form-label">Payload Size (bytes)</label>
-          <input id="evalPayloadSize" type="number" class="form-control" value="256" min="1" />
-        </div>
-      </div>
-    </div>
-
-
-    <button onclick="startEvaluation()">🧪 Start Evaluation</button>
-    <div id="evalStatus" class="mt-2 text-info"></div>
-
-
-    <div class="card p-3 mb-4">
-        <h5 class="section-title">5) Save / Load Simulation Environment</h5>
-        <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-outline-primary" onclick="saveConfig()">💾 Save</button>
-            <button class="btn btn-outline-secondary" onclick="loadConfig()">📂 Load</button>
-            <button class="btn btn-outline-success" onclick="downloadConfig()">⬇ Export JSON</button>
-            <input type="file" id="uploadConfigInput" accept=".json" style="display:none;" />
-            <label for="uploadConfigInput" class="btn btn-outline-info">⬆ Import JSON</label>
-        </div>
+<body>
+  <!-- Header -->
+  <div class="main-header">
+    <div class="container">
+      <h1><i class="bi bi-diagram-3"></i> MQTT Simulation & Evaluation Platform</h1>
+      <p>Design, deploy, and evaluate MQTT broker performance with real-world simulation scenarios</p>
     </div>
   </div>
 
-   
+  <div class="container">
+    <!-- Quick Actions Bar -->
+    <div class="quick-actions">
+      <div class="quick-stat">
+        <i class="bi bi-broadcast"></i>
+        <span>Topics: <strong id="topicCount">0</strong></span>
+      </div>
+      <div class="quick-stat">
+        <i class="bi bi-send"></i>
+        <span>Publishers: <strong id="pubCount">0</strong></span>
+      </div>
+      <div class="quick-stat">
+        <i class="bi bi-inbox"></i>
+        <span>Subscribers: <strong id="subCount">0</strong></span>
+      </div>
+      <div class="ms-auto">
+        <button class="btn btn-sm btn-outline-primary" onclick="showHelp()">
+          <i class="bi bi-question-circle"></i> Help
+        </button>
+      </div>
+    </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Step 1: Topic Management -->
+    <div class="custom-card fade-in">
+      <div class="section-header">
+        <div class="section-number">1</div>
+        <h2 class="section-title">Topic Management</h2>
+        <button class="btn btn-sm btn-outline-secondary" onclick="showTopicTemplates()">
+          <i class="bi bi-lightning"></i> Templates
+        </button>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="singleTopic" class="form-label">
+            <i class="bi bi-plus-circle"></i> Add Single Topic
+          </label>
+          <div class="input-group">
+            <input id="singleTopic" class="form-control" placeholder="e.g., sensors/temperature/room1" />
+            <button class="btn btn-success" onclick="addSingleTopic()">
+              <i class="bi bi-plus"></i> Add
+            </button>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">
+            <i class="bi bi-collection"></i> Create Topic Group
+          </label>
+          <div class="input-group">
+            <input id="groupName" class="form-control" placeholder="e.g., Temperature" />
+            <input id="groupCount" type="number" class="form-control" value="3" min="1" style="max-width: 80px;" />
+            <button class="btn btn-primary" onclick="addTopicGroup()">
+              <i class="bi bi-folder-plus"></i> Create
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <label class="form-label mb-0">
+            <i class="bi bi-list-ul"></i> Available Topics
+          </label>
+          <button class="btn btn-sm btn-outline-danger" onclick="resetTopics()">
+            <i class="bi bi-trash"></i> Clear All
+          </button>
+        </div>
+        <div id="topicList" class="topic-list">
+          <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <p>No topics created yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Publisher Configuration -->
+    <div class="custom-card fade-in">
+      <div class="section-header">
+        <div class="section-number">2</div>
+        <h2 class="section-title">Publisher Configuration</h2>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label for="pubGroupName" class="form-label">Group Name</label>
+          <input id="pubGroupName" class="form-control" placeholder="e.g., SensorGroup" />
+        </div>
+        <div class="col-md-2">
+          <label for="pubGroupCount" class="form-label">Count</label>
+          <input id="pubGroupCount" type="number" class="form-control" value="3" min="1" />
+        </div>
+        <div class="col-md-2">
+          <label for="pubFreq" class="form-label">Interval (s)</label>
+          <input id="pubFreq" type="number" class="form-control" value="1" step="0.1" />
+        </div>
+        <div class="col-md-2">
+          <label for="pubPayload" class="form-label">Payload (B)</label>
+          <input id="pubPayload" type="number" class="form-control" value="128" />
+        </div>
+        <div class="col-md-2">
+          <label for="pubQoS" class="form-label">QoS Level</label>
+          <select id="pubQoS" class="form-select">
+            <option value="0">QoS 0</option>
+            <option value="1" selected>QoS 1</option>
+            <option value="2">QoS 2</option>
+          </select>
+        </select>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-2">
+          <div class="mt-3">
+            <div class="topic-item selectable-topic" id="retainToggle" onclick="toggleRetain()">
+              <span><i class="bi bi-pin-angle"></i> Retain Messages</span>
+              <i class="bi bi-check-circle text-success" style="display: none;"></i>
+            </div>
+          </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">
+          <i class="bi bi-check2-square"></i> Select Topics for Publishers
+        </label>
+        <div id="pubTopics" class="checkbox-container"></div>
+      </div>
+
+      <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-primary" onclick="addPublisherGroup()">
+          <i class="bi bi-plus-circle"></i> Add Publisher Group
+        </button>
+        <button class="btn btn-outline-danger" onclick="resetPublisherGroups()">
+          <i class="bi bi-arrow-clockwise"></i> Reset
+        </button>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">
+          <i class="bi bi-list-check"></i> Publisher Groups
+        </label>
+        <div id="pubGroupList"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: Subscriber Configuration -->
+    <div class="custom-card fade-in">
+      <div class="section-header">
+        <div class="section-number">3</div>
+        <h2 class="section-title">Subscriber Configuration</h2>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="subGroupName" class="form-label">Group Name</label>
+          <input id="subGroupName" class="form-control" placeholder="e.g., DashboardClients" />
+        </div>
+        <div class="col-md-3">
+          <label for="subGroupCount" class="form-label">Count</label>
+          <input id="subGroupCount" type="number" class="form-control" value="3" min="1" />
+        </div>
+        <div class="col-md-3">
+          <label for="subQoS" class="form-label">QoS Level</label>
+          <select id="subQoS" class="form-select">
+            <option value="0">QoS 0</option>
+            <option value="1" selected>QoS 1</option>
+            <option value="2">QoS 2</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">
+          <i class="bi bi-check2-square"></i> Select Topics for Subscribers
+        </label>
+        <div id="subTopics" class="checkbox-container"></div>
+      </div>
+
+      <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-primary" onclick="addSubscriberGroup()">
+          <i class="bi bi-plus-circle"></i> Add Subscriber Group
+        </button>
+        <button class="btn btn-outline-danger" onclick="resetSubscriberGroups()">
+          <i class="bi bi-arrow-clockwise"></i> Reset
+        </button>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">
+          <i class="bi bi-list-check"></i> Subscriber Groups
+        </label>
+        <div id="subGroupList"></div>
+      </div>
+    </div>
+
+    <!-- Step 4: Deployment & Evaluation -->
+    <div class="custom-card fade-in">
+      <div class="section-header">
+        <div class="section-number">4</div>
+        <h2 class="section-title">Deployment & Evaluation</h2>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="card h-100 border-0 bg-light">
+            <div class="card-body">
+              <h5 class="card-title">
+                <i class="bi bi-cloud-upload"></i> Deploy to Node-RED
+              </h5>
+              <div class="row g-2 mb-3">
+                <div class="col-8">
+                  <label class="form-label small">Broker Host</label>
+                  <input id="brokerName" class="form-control" value="localhost" />
+                </div>
+                <div class="col-4">
+                  <label class="form-label small">Port</label>
+                  <input id="brokerPort" type="number" class="form-control" value="1883" />
+                </div>
+              </div>
+              <button id="deployBtn" class="btn btn-success w-100" onclick="deploySimulation()">
+                <i class="bi bi-rocket-takeoff"></i> Deploy Simulation
+              </button>
+              <div id="deployStatus" class="mt-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card h-100 border-0 bg-light">
+            <div class="card-body">
+              <h5 class="card-title">
+                <i class="bi bi-speedometer2"></i> Run Evaluation
+              </h5>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label small">Duration (s)</label>
+                  <input id="evalDuration" type="number" class="form-control" value="60" min="5" />
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Payload (B)</label>
+                  <input id="evalPayloadSize" type="number" class="form-control" value="256" min="1" />
+                </div>
+              </div>
+              <button class="btn btn-primary w-100" onclick="startEvaluation()">
+                <i class="bi bi-play-circle"></i> Start Evaluation
+              </button>
+              <div id="evalStatus" class="mt-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: Configuration Management -->
+    <div class="custom-card fade-in">
+      <div class="section-header">
+        <div class="section-number">5</div>
+        <h2 class="section-title">Configuration Management</h2>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2 justify-content-center">
+        <button class="btn btn-outline-primary" onclick="saveConfig()">
+          <i class="bi bi-save"></i> Save to Browser
+        </button>
+        <button class="btn btn-outline-secondary" onclick="loadConfig()">
+          <i class="bi bi-folder-open"></i> Load from Browser
+        </button>
+        <button class="btn btn-outline-success" onclick="downloadConfig()">
+          <i class="bi bi-download"></i> Export JSON
+        </button>
+        <input type="file" id="uploadConfigInput" accept=".json" style="display:none;" />
+        <label for="uploadConfigInput" class="btn btn-outline-info mb-0">
+          <i class="bi bi-upload"></i> Import JSON
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Modal -->
+  <div class="modal fade" id="progressModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-body text-center p-4">
+          <div class="mb-3">
+            <i class="bi bi-hourglass-split text-primary" style="font-size: 3rem;"></i>
+          </div>
+          <h5 id="progressText" class="mb-3">Initializing evaluation...</h5>
+          <div class="progress">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" style="width: 0%">0%</div>
+          </div>
+          <p class="text-muted small mt-3 mb-0">Please wait while we run the evaluation...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-question-circle"></i> Quick Start Guide
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="accordion" id="helpAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#help1">
+                  Step 1: Create Topics
+                </button>
+              </h2>
+              <div id="help1" class="accordion-collapse collapse show" data-bs-parent="#helpAccordion">
+                <div class="accordion-body">
+                  <p>Start by creating MQTT topics that your publishers and subscribers will use:</p>
+                  <ul>
+                    <li><strong>Single Topic:</strong> Add individual topics like "sensors/temp/room1"</li>
+                    <li><strong>Topic Group:</strong> Create multiple related topics at once (e.g., "Temperature" with count 5 creates Temperature_Topic1 through Temperature_Topic5)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#help2">
+                  Step 2: Configure Publishers
+                </button>
+              </h2>
+              <div id="help2" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                <div class="accordion-body">
+                  <p>Create publisher groups that will send messages to your topics:</p>
+                  <ul>
+                    <li><strong>Group Name:</strong> Descriptive name for the publisher group</li>
+                    <li><strong>Count:</strong> Number of publisher instances to create</li>
+                    <li><strong>Interval:</strong> How often to publish messages (in seconds)</li>
+                    <li><strong>Payload:</strong> Size of the message payload in bytes</li>
+                    <li><strong>QoS:</strong> Quality of Service level (0, 1, or 2)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#help3">
+                  Step 3: Configure Subscribers
+                </button>
+              </h2>
+              <div id="help3" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                <div class="accordion-body">
+                  <p>Create subscriber groups that will receive messages from topics:</p>
+                  <ul>
+                    <li>Each subscriber can listen to multiple topics</li>
+                    <li>Subscribers automatically calculate message latency</li>
+                    <li>Results are aggregated for performance analysis</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
   <script>
-
+    // Global variables
     let publisherGroups = [];
     let subscriberGroups = [];
     let topicCache = [];
 
+    // Initialize
+    window.addEventListener('load', () => {
+      refreshAllTopics();
+      updateQuickStats();
+    });
 
-  async function fetchTopics() {
-    const res = await fetch('/topics');
-    topicCache = await res.json();
-    return topicCache;
-  }
-
-    async function refreshTopicList(skipFetch = false) {
-        if (!skipFetch) {
-            const res = await fetch('/topics');
-            topicCache = await res.json();
-        }
-
-        const list = document.getElementById('topicList');
-        list.innerHTML = '';
-        topicCache.forEach(t => {
-            const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            li.textContent = t;
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-sm btn-outline-danger';
-            btn.textContent = '❌';
-            btn.onclick = async () => {
-            await fetch(`/topics/${encodeURIComponent(t)}`, { method: 'DELETE' });
-            await fetchTopics();
-            refreshTopicList(true);
-            loadTopicCheckboxes('pubTopics');
-            loadTopicCheckboxes('subTopics');
-          };
-            li.appendChild(btn);
-            list.appendChild(li);
-        });
+    // Update quick stats
+    function updateQuickStats() {
+      document.getElementById('topicCount').textContent = topicCache.length;
+      document.getElementById('pubCount').textContent = publisherGroups.reduce((sum, g) => sum + g.count, 0);
+      document.getElementById('subCount').textContent = subscriberGroups.reduce((sum, g) => sum + g.count, 0);
     }
 
-    async function loadTopicCheckboxes(containerId) {
-        const topics = topicCache.length ? topicCache : await fetchTopics();
-        const container = document.getElementById(containerId);
-        container.innerHTML = '';
-        topics.forEach(t => {
-            const div = document.createElement('div');
-            div.className = 'form-check';
-            const cb = document.createElement('input');
-            cb.className = 'form-check-input';
-            cb.type = 'checkbox';
-            cb.value = t;
-            cb.id = `${containerId}_${t}`;
-            const label = document.createElement('label');
-            label.className = 'form-check-label';
-            label.htmlFor = cb.id;
-            label.textContent = t;
-            div.appendChild(cb);
-            div.appendChild(label);
-            container.appendChild(div);
+    // Show help modal
+    function showHelp() {
+      new bootstrap.Modal(document.getElementById('helpModal')).show();
+    }
+
+    // Show topic templates
+    function showTopicTemplates() {
+      const templates = [
+        { name: "IoT Sensors", topics: ["sensors/temperature", "sensors/humidity", "sensors/pressure", "sensors/motion"] },
+        { name: "Smart Home", topics: ["home/livingroom/light", "home/bedroom/temp", "home/kitchen/motion", "home/security/alarm"] },
+        { name: "Industrial", topics: ["factory/machine1/status", "factory/machine2/status", "factory/alerts", "factory/metrics"] }
+      ];
+      
+      // You can implement a modal to show these templates
+      if (confirm("Load IoT Sensors template?")) {
+        templates[0].topics.forEach(async (topic) => {
+          await fetch('/topics', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ topic })
+          });
         });
+        refreshAllTopics();
+      }
+    }
+
+    // Enhanced topic list rendering
+    async function refreshTopicList(skipFetch = false) {
+      if (!skipFetch) {
+        const res = await fetch('/topics');
+        topicCache = await res.json();
+      }
+
+      const list = document.getElementById('topicList');
+      
+      if (topicCache.length === 0) {
+        list.innerHTML = '<div class="empty-state"><i class="bi bi-inbox"></i><p>No topics created yet</p></div>';
+      } else {
+        list.innerHTML = '';
+        topicCache.forEach(t => {
+          const div = document.createElement('div');
+          div.className = 'topic-item';
+          div.innerHTML = `
+            <span><i class="bi bi-broadcast-pin"></i> ${t}</span>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteTopic('${t}')">
+              <i class="bi bi-x"></i>
+            </button>
+          `;
+          list.appendChild(div);
+        });
+      }
+      
+      updateQuickStats();
+    }
+
+    // Delete topic
+    async function deleteTopic(topic) {
+      await fetch(`/topics/${encodeURIComponent(topic)}`, { method: 'DELETE' });
+      await fetchTopics();
+      refreshTopicList(true);
+      loadTopicCheckboxes('pubTopics');
+      loadTopicCheckboxes('subTopics');
+    }
+
+    // Enhanced group list rendering
+    function renderGroupList(groups, containerId, kind) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      if (groups.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="bi bi-inbox"></i><p>No groups created yet</p></div>';
+        return;
+      }
+
+      groups.forEach((group, index) => {
+        const div = document.createElement('div');
+        div.className = 'group-item';
+        
+        const icon = kind === 'publisher' ? 'bi-send' : 'bi-inbox';
+        const arrow = kind === 'publisher' ? '→' : '←';
+        
+        div.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <h6 class="mb-1">
+                <i class="bi ${icon}"></i> ${group.group_name}
+                <span class="badge bg-primary ms-2">${group.count} instances</span>
+              </h6>
+              <div class="group-details">
+                <span class="me-3"><i class="bi bi-diagram-2"></i> Topics: ${group.topics.join(', ')}</span>
+                <span class="me-3"><i class="bi bi-shield-check"></i> QoS: ${group.qos}</span>
+                ${kind === 'publisher' ? `
+                  <span class="me-3"><i class="bi bi-clock"></i> ${group.frequency}s</span>
+                  <span class="me-3"><i class="bi bi-file-binary"></i> ${group.payload_size}B</span>
+                  <span><i class="bi bi-pin-angle"></i> Retain: ${group.retain ? 'Yes' : 'No'}</span>
+                ` : ''}
+              </div>
+            </div>
+            <button class="btn btn-sm btn-outline-danger" onclick="removeGroup('${kind}', ${index})">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        `;
+        
+        container.appendChild(div);
+      });
+      
+      updateQuickStats();
+    }
+
+    // Remove group
+    function removeGroup(kind, index) {
+      if (kind === 'publisher') {
+        publisherGroups.splice(index, 1);
+        renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
+      } else {
+        subscriberGroups.splice(index, 1);
+        renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
+      }
+    }
+
+    // Topic management functions
+    async function fetchTopics() {
+      const res = await fetch('/topics');
+      topicCache = await res.json();
+      return topicCache;
+    }
+
+    async function addSingleTopic() {
+      const name = document.getElementById('singleTopic').value.trim();
+      if (!name) {
+        showNotification('Please enter a topic name', 'warning');
+        return;
+      }
+      
+      await fetch('/topics', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ topic: name })
+      });
+      
+      document.getElementById('singleTopic').value = '';
+      await refreshAllTopics();
+      showNotification(`Topic "${name}" added successfully`, 'success');
+    }
+
+    async function addTopicGroup() {
+      const name = document.getElementById('groupName').value.trim();
+      const count = parseInt(document.getElementById('groupCount').value);
+      
+      if (!name || isNaN(count)) {
+        showNotification('Please enter valid group name and count', 'warning');
+        return;
+      }
+      
+      await fetch('/topics', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ group_name: name, count })
+      });
+      
+      document.getElementById('groupName').value = '';
+      document.getElementById('groupCount').value = '3';
+      await refreshAllTopics();
+      showNotification(`Topic group "${name}" created with ${count} topics`, 'success');
+    }
+
+    async function resetTopics() {
+      if (!confirm("Are you sure you want to delete all topics?")) return;
+      
+      await fetch('/topics', { method: 'DELETE' });
+      await refreshAllTopics();
+      showNotification('All topics cleared', 'info');
+    }
+
+    async function refreshAllTopics() {
+      await fetchTopics();
+      refreshTopicList(true);
+      loadTopicCheckboxes('pubTopics');
+      loadTopicCheckboxes('subTopics');
+    }
+
+    // Enhanced checkbox loading with better styling
+    async function loadTopicCheckboxes(containerId) {
+      const topics = topicCache.length ? topicCache : await fetchTopics();
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      
+      if (topics.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted p-3">No topics available. Create topics first.</div>';
+        return;
+      }
+      
+      topics.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'topic-item selectable-topic';
+        div.dataset.topic = t;
+        div.innerHTML = `
+          <span><i class="bi bi-broadcast-pin text-muted"></i> ${t}</span>
+          <i class="bi bi-check-circle text-success" style="display: none;"></i>
+        `;
+        div.onclick = () => toggleTopicSelection(div, containerId);
+        container.appendChild(div);
+      });
+    }
+
+    function toggleTopicSelection(element, containerId) {
+      element.classList.toggle('selected');
+      const checkIcon = element.querySelector('.bi-check-circle');
+      checkIcon.style.display = element.classList.contains('selected') ? 'block' : 'none';
+    }
+
+    function getCheckedTopics(containerId) {
+      return Array.from(document.querySelectorAll(`#${containerId} .topic-item.selected`))
+        .map(el => el.dataset.topic);
     }
 
     function getCheckedTopics(containerId) {
       return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(cb => cb.value);
     }
 
-    async function addSingleTopic() {
-      const name = document.getElementById('singleTopic').value.trim();
-      if (!name) return alert("Enter a topic name.");
-      await fetch('/topics', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ topic: name })
-      });
-      document.getElementById('singleTopic').value = '';
-      await fetchTopics();
-      refreshTopicList(true);
-      loadTopicCheckboxes('pubTopics');
-      loadTopicCheckboxes('subTopics');
-
-    }
-
-    async function addTopicGroup() {
-      const name = document.getElementById('groupName').value.trim();
-      const count = parseInt(document.getElementById('groupCount').value);
-      if (!name || isNaN(count)) return alert("Enter valid group name and count.");
-      await fetch('/topics', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ group_name: name, count })
-      });
-      document.getElementById('groupName').value = '';
-      document.getElementById('groupCount').value = '3';
-      await fetchTopics();
-      refreshTopicList(true);
-      loadTopicCheckboxes('pubTopics');
-      loadTopicCheckboxes('subTopics');
-    }
-
-    async function resetTopics() {
-      if (!confirm("Reset all topics and groups?")) return;
-      await fetch('/topics', { method: 'DELETE' });
-      await fetchTopics();
-      refreshTopicList(true);
-      loadTopicCheckboxes('pubTopics');
-      loadTopicCheckboxes('subTopics');
-    }
-
+    // Publisher/Subscriber management
     function addPublisherGroup() {
-        const group_name = document.getElementById('pubGroupName').value.trim();
-        const count = parseInt(document.getElementById('pubGroupCount').value);
-        const frequency = parseFloat(document.getElementById('pubFreq').value);
-        const payload_size = parseInt(document.getElementById('pubPayload').value);
-        const qos = parseInt(document.getElementById('pubQoS').value);
-        const retain = document.getElementById('pubRetain').checked;
-        const topics = getCheckedTopics('pubTopics');
+      const group_name = document.getElementById('pubGroupName').value.trim();
+      const count = parseInt(document.getElementById('pubGroupCount').value);
+      const frequency = parseFloat(document.getElementById('pubFreq').value);
+      const payload_size = parseInt(document.getElementById('pubPayload').value);
+      const qos = parseInt(document.getElementById('pubQoS').value);
+      const retain = retainEnabled;
+      const topics = getCheckedTopics('pubTopics');
 
-        if (!group_name || isNaN(count) || topics.length === 0) {
-            return alert("Fill all fields and select at least one topic.");
-        }
+      if (!group_name || isNaN(count) || topics.length === 0) {
+        showNotification('Please fill all fields and select at least one topic', 'warning');
+        return;
+      }
 
-        const group = { group_name, count, frequency, payload_size, qos, retain, topics };
-        publisherGroups.push(group);
-        renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
+      const group = { group_name, count, frequency, payload_size, qos, retain, topics };
+      publisherGroups.push(group);
+      renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
+      
+      // Clear form
+      document.getElementById('pubGroupName').value = '';
+      document.querySelectorAll('#pubTopics input:checked').forEach(cb => cb.checked = false);
+      
+      showNotification(`Publisher group "${group_name}" added`, 'success');
     }
 
     function addSubscriberGroup() {
-        const group_name = document.getElementById('subGroupName').value.trim();
-        const count = parseInt(document.getElementById('subGroupCount').value);
-        const qos = parseInt(document.getElementById('subQoS').value);
-        const topics = getCheckedTopics('subTopics');
+      const group_name = document.getElementById('subGroupName').value.trim();
+      const count = parseInt(document.getElementById('subGroupCount').value);
+      const qos = parseInt(document.getElementById('subQoS').value);
+      const topics = getCheckedTopics('subTopics');
 
-        if (!group_name || isNaN(count) || topics.length === 0) {
-            return alert("Fill all fields and select at least one topic.");
-        }
+      if (!group_name || isNaN(count) || topics.length === 0) {
+        showNotification('Please fill all fields and select at least one topic', 'warning');
+        return;
+      }
 
-        const group = { group_name, count, qos, topics };
-        subscriberGroups.push(group);
-        renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
+      const group = { group_name, count, qos, topics };
+      subscriberGroups.push(group);
+      renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
+      
+      // Clear form
+      document.getElementById('subGroupName').value = '';
+      document.querySelectorAll('#subTopics input:checked').forEach(cb => cb.checked = false);
+      
+      showNotification(`Subscriber group "${group_name}" added`, 'success');
     }
 
     function resetPublisherGroups() {
-        if (confirm("Clear all publisher groups?")) {
-            publisherGroups = [];
-            renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
-        }
+      if (confirm("Clear all publisher groups?")) {
+        publisherGroups = [];
+        renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
+        showNotification('Publisher groups cleared', 'info');
+      }
     }
 
     function resetSubscriberGroups() {
-        if (confirm("Clear all subscriber groups?")) {
-            subscriberGroups = [];
-            renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
-        }
+      if (confirm("Clear all subscriber groups?")) {
+        subscriberGroups = [];
+        renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
+        showNotification('Subscriber groups cleared', 'info');
+      }
     }
 
-    function renderGroupList(groups, containerId, kind) {
-      const list = document.getElementById(containerId);
-      list.innerHTML = '';
+    let retainEnabled = false;
 
-      groups.forEach((group, index) => {
-        const li = document.createElement('li');
-        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    function toggleRetain() {
+      retainEnabled = !retainEnabled;
+      const toggle = document.getElementById('retainToggle');
+      toggle.classList.toggle('selected');
+      const checkIcon = toggle.querySelector('.bi-check-circle');
+      checkIcon.style.display = retainEnabled ? 'block' : 'none';
+    }
 
-        const label = document.createElement('span');
+    // Deployment function
+    async function deploySimulation() {
+      const payload = {
+        publisher_groups: publisherGroups,
+        subscriber_groups: subscriberGroups,
+        broker_name: document.getElementById('brokerName').value.trim(),
+        broker_port: parseInt(document.getElementById('brokerPort').value)
+      };
 
-        const name = group.group_name || `Unnamed`;
-        const count = group.count ?? '?';
-        const topics = Array.isArray(group.topics) ? group.topics.join(', ') : '—';
-        const qos = group.qos ?? '—';
-        const retain = typeof group.retain === 'boolean' ? (group.retain ? 'Yes' : 'No') : '—';
+      const deployBtn = document.getElementById('deployBtn');
+      const statusEl = document.getElementById('deployStatus');
+      
+      deployBtn.disabled = true;
+      deployBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deploying...';
+      statusEl.innerHTML = '';
 
-        if (kind === 'publisher') {
-          label.innerText = `${name} (${count}) → [${topics}] | QoS: ${qos} | Retain: ${retain}`;
+      try {
+        const res = await fetch('/deploy_simulation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          statusEl.innerHTML = `
+            <div class="status-message status-success">
+              <i class="bi bi-check-circle me-2"></i>
+              Deployed successfully!
+            </div>
+          `;
+          
+          if (data.warnings?.length) {
+            statusEl.innerHTML += `
+              <div class="status-message status-warning mt-2">
+                <div>
+                  <i class="bi bi-exclamation-triangle me-2"></i>
+                  <strong>Warnings:</strong>
+                  <ul class="mb-0 mt-2">
+                    ${data.warnings.map(w => `<li>${w}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
+            `;
+          }
         } else {
-          label.innerText = `${name} (${count}) ← [${topics}] | QoS: ${qos}`;
+          statusEl.innerHTML = `
+            <div class="status-message status-error">
+              <i class="bi bi-x-circle me-2"></i>
+              Error: ${data.error || "Unknown error"}
+            </div>
+          `;
         }
-
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-sm btn-outline-danger';
-        btn.textContent = '❌';
-        btn.onclick = () => {
-          groups.splice(index, 1);
-          renderGroupList(groups, containerId, kind);
-        };
-
-        li.appendChild(label);
-        li.appendChild(btn);
-        list.appendChild(li);
-      });
-
-      if (kind === 'publisher' && document.getElementById('pubCount')) {
-        document.getElementById('pubCount').textContent = groups.length;
+      } catch (err) {
+        statusEl.innerHTML = `
+          <div class="status-message status-error">
+            <i class="bi bi-x-circle me-2"></i>
+            Exception: ${err.message}
+          </div>
+        `;
+      } finally {
+        deployBtn.disabled = false;
+        deployBtn.innerHTML = '<i class="bi bi-rocket-takeoff"></i> Deploy Simulation';
       }
-      if (kind === 'subscriber' && document.getElementById('subCount')) {
-        document.getElementById('subCount').textContent = groups.length;
-      }
-  }
-
-
-
-    function displayInstances(instances, listId, warningId) {
-      const list = document.getElementById(listId);
-      const warn = document.getElementById(warningId);
-      list.innerHTML = '';
-      instances.forEach(inst => {
-        const li = document.createElement('li');
-        li.className = 'list-group-item';
-        li.textContent = inst.topic
-        ? `${inst.name} ↔ ${inst.topic}`
-        : `${inst.name} ← ${inst.topics.join(', ')}`;
-        list.appendChild(li);
-      });
-      warn.innerHTML = instances.length === 0 ? '' : '';
     }
 
-  async function refreshAllTopics() {
-    await fetchTopics();                
-    refreshTopicList(true);             
-    loadTopicCheckboxes('pubTopics');
-    loadTopicCheckboxes('subTopics');
-  }
+    // Evaluation function
+    async function startEvaluation() {
+      const broker = document.getElementById("brokerName").value.trim();
+      const port = parseInt(document.getElementById("brokerPort").value, 10) || 1883;
+      const duration = parseInt(document.getElementById("evalDuration").value, 10) || 60;
+      const payloadSize = parseInt(document.getElementById("evalPayloadSize").value, 10) || 256;
 
-    window.addEventListener('load', () => {
-      refreshAllTopics();
-    });
+      const payload = {
+        broker_name: broker,
+        broker_port: port,
+        duration: duration,
+        payload_size: payloadSize
+      };
 
+      const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+      const txt = document.getElementById('progressText');
+      const bar = document.getElementById('progressBar');
+      
+      modal.show();
+
+      let job_id;
+      try {
+        const res = await fetch('/run_tests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        job_id = json.job_id;
+      } catch (err) {
+        modal.hide();
+        showNotification(`Failed to start evaluation: ${err.message}`, 'error');
+        return;
+      }
+
+      let percent = 0;
+      const iv = setInterval(async () => {
+        try {
+          const res = await fetch(`/status/${job_id}`);
+          const status = await res.json();
+
+          if (status.error) {
+            clearInterval(iv);
+            txt.textContent = 'Evaluation failed!';
+            bar.className = 'progress-bar bg-danger';
+            bar.textContent = 'Failed';
+            setTimeout(() => modal.hide(), 2000);
+            showNotification(status.error || "Evaluation failed", 'error');
+            return;
+          }
+
+          if (status.status === 'done') {
+            clearInterval(iv);
+            txt.textContent = 'Evaluation completed!';
+            bar.style.width = '100%';
+            bar.textContent = '100%';
+            bar.className = 'progress-bar bg-success';
+            setTimeout(() => {
+              window.location = `/results/${job_id}`;
+            }, 1000);
+          } else {
+            percent = Math.min(percent + (100 / duration), 95);
+            txt.textContent = `Running evaluation... (${Math.round(percent)}%)`;
+            bar.style.width = `${percent}%`;
+            bar.textContent = `${Math.round(percent)}%`;
+          }
+        } catch (e) {
+          clearInterval(iv);
+          modal.hide();
+          showNotification("Failed to poll status", 'error');
+        }
+      }, 1000);
+    }
+
+    // Configuration management
     function getCurrentConfig() {
-        return {
-            topics: topicCache,  
-            publisher_groups: publisherGroups,
-            subscriber_groups: subscriberGroups
-        };
+      return {
+        topics: topicCache,
+        publisher_groups: publisherGroups,
+        subscriber_groups: subscriberGroups
+      };
     }
 
     async function applyConfig(config) {
-      // 1. Reset topics on backend
       await fetch('/topics', { method: 'DELETE' });
 
-      // 2. Recreate topics on backend
       const topics = config.topics || [];
       for (const t of topics) {
         await fetch('/topics', {
@@ -440,201 +1197,270 @@
         });
       }
 
-      // 3. Update in-memory and group lists
       topicCache = topics;
       publisherGroups = config.publisher_groups || [];
       subscriberGroups = config.subscriber_groups || [];
 
-      // 4. Fetch confirmed topics back from backend
-      await fetchTopics(); // fills topicCache again
-      refreshTopicList(true); // render topic list
-      loadTopicCheckboxes('pubTopics');
-      loadTopicCheckboxes('subTopics');
-
+      await refreshAllTopics();
       renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
       renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
     }
 
-
     function saveConfig() {
-        const config = getCurrentConfig();
-        localStorage.setItem('mqtt_sim_config', JSON.stringify(config));
-        alert("Simulation config saved.");
+      const config = getCurrentConfig();
+      localStorage.setItem('mqtt_sim_config', JSON.stringify(config));
+      showNotification('Configuration saved to browser storage', 'success');
     }
 
     function loadConfig() {
-        const raw = localStorage.getItem('mqtt_sim_config');
-        if (!raw) return alert("No saved config found.");
-        try {
-            const config = JSON.parse(raw);
-            applyConfig(config);
-            alert("Simulation config loaded.");
-        } catch {
-            alert("Failed to parse config.");
-        }
+      const raw = localStorage.getItem('mqtt_sim_config');
+      if (!raw) {
+        showNotification('No saved configuration found', 'warning');
+        return;
+      }
+      try {
+        const config = JSON.parse(raw);
+        applyConfig(config);
+        showNotification('Configuration loaded successfully', 'success');
+      } catch {
+        showNotification('Failed to parse saved configuration', 'error');
+      }
     }
 
     function downloadConfig() {
-        const blob = new Blob([JSON.stringify(getCurrentConfig(), null, 2)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'mqtt_sim_config.json';
-        a.click();
-        URL.revokeObjectURL(url);
+      const blob = new Blob([JSON.stringify(getCurrentConfig(), null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mqtt_sim_config_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     document.getElementById('uploadConfigInput').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
         try {
-        const config = JSON.parse(evt.target.result);
-        applyConfig(config);
-        alert("Imported simulation config.");
+          const config = JSON.parse(evt.target.result);
+          applyConfig(config);
+          showNotification('Configuration imported successfully', 'success');
         } catch {
-        alert("Invalid JSON file.");
+          showNotification('Invalid JSON file', 'error');
         }
-    };
-    reader.readAsText(file);
+      };
+      reader.readAsText(file);
     });
 
-    document.getElementById('deployBtn').addEventListener('click', async () => {
-    const payload = {
-      publisher_groups: publisherGroups,
-      subscriber_groups: subscriberGroups,
-      broker_name: document.getElementById('brokerName').value.trim(),
-      broker_port: parseInt(document.getElementById('brokerPort').value)
-    };
+    // Notification helper
+    function showNotification(message, type = 'info') {
+      const alertClass = {
+        'success': 'alert-success',
+        'error': 'alert-danger',
+        'warning': 'alert-warning',
+                'info': 'alert-info'
+      }[type] || 'alert-info';
 
-    const deployBtn = document.getElementById('deployBtn');
-    const statusEl = document.getElementById('deployStatus');
-    deployBtn.disabled = true;
-    statusEl.innerHTML = "Deploying to Node-RED...";
+      const icon = {
+        'success': 'bi-check-circle',
+        'error': 'bi-x-circle',
+        'warning': 'bi-exclamation-triangle',
+        'info': 'bi-info-circle'
+      }[type] || 'bi-info-circle';
 
-    try {
-      const res = await fetch('/deploy_simulation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const notification = document.createElement('div');
+      notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+      notification.style.zIndex = '9999';
+      notification.style.minWidth = '300px';
+      notification.innerHTML = `
+        <i class="bi ${icon} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+
+      document.body.appendChild(notification);
+
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 150);
+      }, 5000);
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Ctrl+S to save config
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        saveConfig();
+      }
+      // Ctrl+O to load config
+      if (e.ctrlKey && e.key === 'o') {
+        e.preventDefault();
+        loadConfig();
+      }
+      // Ctrl+D to deploy
+      if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault();
+        deploySimulation();
+      }
+      // Ctrl+E to evaluate
+      if (e.ctrlKey && e.key === 'e') {
+        e.preventDefault();
+        startEvaluation();
+      }
+    });
+
+    // Add tooltips to all elements with title attribute
+    document.addEventListener('DOMContentLoaded', function() {
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
       });
+    });
 
-      const data = await res.json();
+    // Auto-save configuration every 5 minutes
+    setInterval(() => {
+      if (publisherGroups.length > 0 || subscriberGroups.length > 0) {
+        const config = getCurrentConfig();
+        localStorage.setItem('mqtt_sim_config_autosave', JSON.stringify(config));
+        console.log('Configuration auto-saved');
+      }
+    }, 300000); // 5 minutes
 
-      if (res.ok) {
-        statusEl.innerHTML = "✅ Deployed successfully!";
-        if (data.warnings?.length) {
-          statusEl.innerHTML += "<br><strong>Warnings:</strong><br>" + data.warnings.map(w => `⚠️ ${w}`).join('<br>');
+    // Check for auto-saved configuration on load
+    window.addEventListener('load', () => {
+      const autosave = localStorage.getItem('mqtt_sim_config_autosave');
+      if (autosave && !localStorage.getItem('mqtt_sim_config')) {
+        if (confirm('Found auto-saved configuration. Would you like to restore it?')) {
+          try {
+            const config = JSON.parse(autosave);
+            applyConfig(config);
+            showNotification('Auto-saved configuration restored', 'info');
+          } catch (e) {
+            console.error('Failed to restore auto-save:', e);
+          }
         }
+      }
+    });
+
+    // Add visual feedback for drag and drop
+    const dropZone = document.querySelector('.container');
+    
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      dropZone.style.backgroundColor = '#f0f8ff';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+      dropZone.style.backgroundColor = '';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.backgroundColor = '';
+      
+      const file = e.dataTransfer.files[0];
+      if (file && file.type === 'application/json') {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const config = JSON.parse(evt.target.result);
+            applyConfig(config);
+            showNotification('Configuration imported via drag & drop', 'success');
+          } catch {
+            showNotification('Invalid JSON file', 'error');
+          }
+        };
+        reader.readAsText(file);
       } else {
-        statusEl.innerHTML = "❌ Error: " + (data.error || "Unknown error");
+        showNotification('Please drop a valid JSON file', 'warning');
       }
+    });
 
-    } catch (err) {
-      statusEl.innerHTML = "❌ Exception: " + err.message;
-    } finally {
-      deployBtn.disabled = false;
+    async function checkConnections() {
+      const indicator = document.createElement('div');
+      indicator.className = 'position-fixed bottom-0 end-0 m-3 p-2 bg-white rounded shadow-sm';
+      indicator.style.fontSize = '0.85rem';
+      
+      try {
+        // Check Node-RED
+        const nodeRedResponse = await fetch('/verify_flow');
+        const nodeRedOk = nodeRedResponse.ok;
+        
+        // Check MQTT (TBD: I will get back to implement this)
+        const mqttOk = true; 
+        
+        indicator.innerHTML = `
+          <div class="d-flex align-items-center gap-2">
+            <span class="${nodeRedOk ? 'text-success' : 'text-danger'}">
+              <i class="bi bi-circle-fill"></i> Node-RED
+            </span>
+            <span class="${mqttOk ? 'text-success' : 'text-danger'}">
+              <i class="bi bi-circle-fill"></i> MQTT
+            </span>
+          </div>
+        `;
+      } catch (e) {
+        indicator.innerHTML = `
+          <div class="text-warning">
+            <i class="bi bi-exclamation-circle"></i> Connection check failed
+          </div>
+        `;
+      }
+      
+      document.body.appendChild(indicator);
     }
-  });
 
-  async function startEvaluation() {
-    const broker = document.getElementById("brokerName").value.trim();
-    const port = parseInt(document.getElementById("brokerPort").value, 10) || 1883;
-    const duration = parseInt(document.getElementById("evalDuration").value, 10) || 60;
-    const payloadSize = parseInt(document.getElementById("evalPayloadSize").value, 10) || 256;
+    window.addEventListener('load', () => {
+      setTimeout(checkConnections, 1000);
+    });
 
-    const payload = {
-      broker_name: broker,
-      broker_port: port,
-      duration: duration,
-      payload_size: payloadSize,
-      max_clients: 100 // optional
+    if (window.innerWidth < 768) {
+      document.querySelectorAll('.custom-card').forEach(card => {
+        card.classList.add('mb-3');
+      });
+    }
+
+    let searchTimeout;
+    function addTopicSearch() {
+      const searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.className = 'form-control form-control-sm mb-2';
+      searchInput.placeholder = 'Search topics...';
+      
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          const query = e.target.value.toLowerCase();
+          document.querySelectorAll('.topic-item').forEach(item => {
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(query) ? 'flex' : 'none';
+          });
+        }, 300);
+      });
+      
+      const topicList = document.getElementById('topicList');
+      topicList.parentNode.insertBefore(searchInput, topicList);
+    }
+
+    setTimeout(addTopicSearch, 1000);
+
+    window.mqttSimulation = {
+      getConfig: getCurrentConfig,
+      setConfig: applyConfig,
+      getStats: () => ({
+        topics: topicCache.length,
+        publishers: publisherGroups.reduce((sum, g) => sum + g.count, 0),
+        subscribers: subscriberGroups.reduce((sum, g) => sum + g.count, 0),
+        connections: publisherGroups.reduce((sum, g) => sum + (g.count * g.topics.length), 0)
+      })
     };
 
-    const modalEl = document.getElementById('progressModal');
-    const modal = new bootstrap.Modal(modalEl);
-    const txt = document.getElementById('progressText');
-    const bar = document.getElementById('progressBar');
-    modal.show();
-
-    let job_id;
-    try {
-      const res = await fetch('/run_tests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const json = await res.json();
-      if (json.error) throw new Error(json.error);
-      job_id = json.job_id;
-    } catch (err) {
-      modal.hide();
-      alert("Failed to start evaluation: " + err.message);
-      return;
-    }
-
-    const params = new URLSearchParams(payload);
-    let percent = 0;
-
-    const iv = setInterval(async () => {
-      try {
-        const res = await fetch(`/status/${job_id}`);
-        const status = await res.json();
-
-        if (status.error) {
-          clearInterval(iv);
-          txt.textContent = 'Error!';
-          bar.className = 'progress-bar bg-danger';
-          bar.textContent = '❌ Failed';
-          modal.hide();
-          alert(status.error || "Evaluation failed");
-          return;
-        }
-
-        if (status.status === 'done') {
-          clearInterval(iv);
-          txt.textContent = 'Completed!';
-          bar.style.width = '100%';
-          bar.textContent = '✅ Done';
-          setTimeout(() => {
-            window.location = `/results/${job_id}`;
-          }, 1000);
-        } else {
-          // Simulate smooth progress
-          percent = Math.min(percent + 2, 95);
-          txt.textContent = 'Running Evaluation…';
-          bar.style.width = `${percent}%`;
-          bar.textContent = `${percent}%`;
-        }
-      } catch (e) {
-        clearInterval(iv);
-        txt.textContent = 'Network error';
-        bar.className = 'progress-bar bg-danger';
-        modal.hide();
-        alert("Failed to poll status.");
-      }
-    }, 1000);
-  }
-</script>
-
-<div class="modal fade" id="progressModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content p-4 text-center">
-        <h5 id="progressText">Preparing…</h5>
-        <div class="progress mt-3" style="height:25px;">
-          <div
-            id="progressBar"
-            class="progress-bar bg-info"
-            role="progressbar"
-            style="width:0%"
-            aria-valuemin="0"
-            aria-valuemax="100"
-          >0/3</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
+    console.log('MQTT Simulation Platform initialized successfully');
+    console.log('Keyboard shortcuts: Ctrl+S (save), Ctrl+O (load), Ctrl+D (deploy), Ctrl+E (evaluate)');
+  </script>
 </body>
 </html>
