@@ -561,6 +561,16 @@
               <h5 class="card-title">
                 <i class="bi bi-cloud-upload"></i> Deploy to Node-RED
               </h5>
+              <div class="mb-3">
+                <label class="form-label small">Quick Setup</label>
+                <select id="brokerPreset" class="form-select" onchange="applyBrokerPreset()">
+                  <option value="">Custom Configuration</option>
+                  <option value="local">Local Host (Flask on host)</option>
+                  <option value="nanomq">NanoMQ (Docker)</option>
+                  <option value="mosquitto">Mosquitto (Docker)</option>
+                  <option value="emqx">EMQX (Docker)</option>
+                </select>
+              </div>
               <div class="row g-2 mb-3">
                 <div class="col-8">
                   <label class="form-label small">Broker Host</label>
@@ -726,6 +736,23 @@
     let subscriberGroups = [];
     let topicCache = [];
 
+
+    // Docker networking configuration
+    const DOCKER_BROKERS = ['nanomq', 'mosquitto', 'emqx', 'hivemq', 'vernemq', 'rabbitmq'];
+
+    // Helper to determine if broker is running in Docker
+    function isDockerBroker(brokerName) {
+      return DOCKER_BROKERS.includes(brokerName.toLowerCase());
+    }
+
+    // Add broker presets for easier configuration
+    const BROKER_PRESETS = {
+      'local': { host: 'localhost', port: 1883 },
+      'nanomq': { host: 'nanomq', port: 1883 },
+      'mosquitto': { host: 'mosquitto', port: 1883 },
+      'emqx': { host: 'emqx', port: 1883 }
+    };
+
     // Initialize
     window.addEventListener('load', () => {
       refreshAllTopics();
@@ -762,6 +789,19 @@
           });
         });
         refreshAllTopics();
+      }
+    }
+
+    function applyBrokerPreset() {
+      const preset = document.getElementById('brokerPreset').value;
+      if (preset && BROKER_PRESETS[preset]) {
+        document.getElementById('brokerName').value = BROKER_PRESETS[preset].host;
+        document.getElementById('brokerPort').value = BROKER_PRESETS[preset].port;
+        
+        // Show helpful message
+        if (preset !== 'local') {
+          showNotification(`Configured for ${preset} Docker container`, 'info');
+        }
       }
     }
 
@@ -952,11 +992,6 @@
     }
 
     function getCheckedTopics(containerId) {
-      return Array.from(document.querySelectorAll(`#${containerId} .topic-item.selected`))
-        .map(el => el.dataset.topic);
-    }
-
-    function getCheckedTopics(containerId) {
       return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(cb => cb.value);
     }
 
@@ -982,6 +1017,9 @@
       // Clear form
       document.getElementById('pubGroupName').value = '';
       document.querySelectorAll('#pubTopics input:checked').forEach(cb => cb.checked = false);
+      retainEnabled = false;  // Reset retain toggle
+      document.getElementById('retainToggle').classList.remove('selected');
+      document.querySelector('#retainToggle .bi-check-circle').style.display = 'none';
       
       showNotification(`Publisher group "${group_name}" added`, 'success');
     }
@@ -1036,11 +1074,25 @@
 
     // Deployment function
     async function deploySimulation() {
+      const brokerInput = document.getElementById('brokerName').value.trim();
+      const brokerPort = parseInt(document.getElementById('brokerPort').value);
+      
+      // Validate configuration
+      if (!brokerInput) {
+        showNotification('Please enter a broker host', 'warning');
+        return;
+      }
+      
+      // Show info about Docker configuration if applicable
+      if (isDockerBroker(brokerInput)) {
+        console.log(`🐳 Deploying with Docker broker: ${brokerInput}`);
+      }
+      
       const payload = {
         publisher_groups: publisherGroups,
         subscriber_groups: subscriberGroups,
-        broker_name: document.getElementById('brokerName').value.trim(),
-        broker_port: parseInt(document.getElementById('brokerPort').value)
+        broker_name: brokerInput,  // Backend will handle Docker translation
+        broker_port: brokerPort
       };
 
       const deployBtn = document.getElementById('deployBtn');
@@ -1064,6 +1116,7 @@
             <div class="status-message status-success">
               <i class="bi bi-check-circle me-2"></i>
               Deployed successfully!
+              ${isDockerBroker(brokerInput) ? '<br><small>Using Docker networking</small>' : ''}
             </div>
           `;
           
@@ -1384,22 +1437,25 @@
       const indicator = document.createElement('div');
       indicator.className = 'position-fixed bottom-0 end-0 m-3 p-2 bg-white rounded shadow-sm';
       indicator.style.fontSize = '0.85rem';
+      indicator.style.zIndex = '1000';
       
       try {
         // Check Node-RED
         const nodeRedResponse = await fetch('/verify_flow');
+        const nodeRedData = await nodeRedResponse.json();
         const nodeRedOk = nodeRedResponse.ok;
         
-        // Check MQTT (TBD: I will get back to implement this)
-        const mqttOk = true; 
+        // Check current broker configuration
+        const brokerName = document.getElementById('brokerName').value;
+        const isDocker = isDockerBroker(brokerName);
         
         indicator.innerHTML = `
           <div class="d-flex align-items-center gap-2">
             <span class="${nodeRedOk ? 'text-success' : 'text-danger'}">
               <i class="bi bi-circle-fill"></i> Node-RED
             </span>
-            <span class="${mqttOk ? 'text-success' : 'text-danger'}">
-              <i class="bi bi-circle-fill"></i> MQTT
+            <span class="text-info">
+              <i class="bi bi-${isDocker ? 'box' : 'pc-display'}"></i> ${brokerName || 'No broker'}
             </span>
           </div>
         `;

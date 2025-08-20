@@ -2,6 +2,7 @@
 import csv
 import json
 import os
+from dotenv import load_dotenv
 import statistics
 import threading
 import time
@@ -21,6 +22,24 @@ from paho.mqtt.enums import CallbackAPIVersion
 from deployment.topic_manager import TopicManager
 from deployment.group_expander import GroupExpander
 from evaluation.controller import EvaluationController
+
+
+# Load environment variables
+load_dotenv()
+
+# Configuration for Docker networking
+class Config:
+    # When Flask is on host, Node-RED/NanoMQ in Docker
+    DOCKER_MQTT_HOST = os.getenv('DOCKER_MQTT_HOST', 'nanomq')  # Docker service name
+    DOCKER_NODE_RED_URL = os.getenv('DOCKER_NODE_RED_URL', 'http://nodered:1880')
+    
+    # For host access
+    HOST_MQTT_HOST = os.getenv('HOST_MQTT_HOST', 'localhost')
+    HOST_MQTT_PORT = int(os.getenv('HOST_MQTT_PORT', 1883))
+    NODE_RED_URL = os.getenv('NODE_RED_URL', 'http://localhost:1880')
+
+# Update the global NODE_RED_URL
+NODE_RED_URL = Config.NODE_RED_URL
 
 # Flask app initialization
 app = Flask(__name__, template_folder="frontend/templates", static_folder="frontend/static")
@@ -110,6 +129,8 @@ def expand_groups():
 # SIMULATION DEPLOYMENT ROUTES
 # =============================================================================
 
+# Replace your deploy_simulation function with this fixed version:
+
 @app.route('/deploy_simulation', methods=['POST'])
 def deploy_simulation():
     """Deploy simulation flows to Node-RED"""
@@ -121,6 +142,20 @@ def deploy_simulation():
     # Get broker configuration
     broker_host = data.get("broker_name", "localhost")
     broker_port = int(data.get("broker_port", 1883))
+
+    if broker_host.lower() in ['localhost', '127.0.0.1']:
+        # When Node-RED is in Docker and needs to connect to host
+        # Use the Docker service name if both are in Docker
+        broker_host_for_nodered = Config.DOCKER_MQTT_HOST  # This will be 'nanomq'
+    elif broker_host.lower() in get_docker_broker_names():
+        # If it's a known Docker broker, use the container name
+        broker_host_for_nodered = broker_host.lower()
+    else:
+        # For external brokers, use as-is
+        broker_host_for_nodered = broker_host
+    
+    print(f"🔧 [Docker Fix] Node-RED will connect to: {broker_host_for_nodered}:{broker_port}")
+    print(f"🔧 [Docker Fix] Flask will connect to: {Config.HOST_MQTT_HOST}:{broker_port}")
 
     # Expand groups into individual instances
     pub_expander = GroupExpander(mode="publisher")
@@ -147,8 +182,8 @@ def deploy_simulation():
     all_nodes.append({
         "id": broker_config_id,
         "type": "mqtt-broker",
-        "name": broker_host,
-        "broker": broker_host,
+        "name": f"{broker_host}_config",
+        "broker": broker_host_for_nodered,
         "port": broker_port,
         "clientid": "",
         "usetls": False,
@@ -287,6 +322,16 @@ def deploy_simulation():
                         "try {\n"
                         "  var payload = msg.payload;\n"
                         "  \n"
+                        "  // Handle both string and object payloads\n"
+                        "  if (typeof payload === 'string') {\n"
+                        "    try {\n"
+                        "      payload = JSON.parse(payload);\n"
+                        "    } catch (e) {\n"
+                        "      node.error('Failed to parse payload as JSON: ' + e.message);\n"
+                        "      return null;\n"
+                        "    }\n"
+                        "  }\n"
+                        "  \n"
                         "  // Validate payload\n"
                         "  if (!payload || typeof payload !== 'object') {\n"
                         "    node.error('Invalid payload type: ' + typeof payload);\n"
@@ -294,7 +339,7 @@ def deploy_simulation():
                         "  }\n"
                         "  \n"
                         "  if (!payload.ts_sent) {\n"
-                        "    node.error('Missing ts_sent in payload');\n"
+                        "    node.error('Missing ts_sent in payload: ' + JSON.stringify(payload));\n"
                         "    return null;\n"
                         "  }\n"
                         "  \n"
@@ -302,10 +347,10 @@ def deploy_simulation():
                         "  var now = Date.now();\n"
                         "  var delay = now - payload.ts_sent;\n"
                         "  \n"
-                        "  // Create output message\n"
+                        "  // Create output message for stats collector\n"
                         "  var output = {\n"
                         "    topic: 'sim/stats/delay',\n"
-                        "    payload: {\n"
+                        "    payload: JSON.stringify({\n"
                         f"      name: '{sub['name']}',\n"
                         f"      subscriber_topic: '{topic}',\n"
                         "      delay: delay,\n"
@@ -314,7 +359,7 @@ def deploy_simulation():
                         "      ts_recv: now,\n"
                         "      publisher_name: payload.name || 'unknown',\n"
                         "      original_topic: payload.topic || msg.topic\n"
-                        "    }\n"
+                        "    })\n"
                         "  };\n"
                         "  \n"
                         "  // Log success\n"
@@ -322,7 +367,7 @@ def deploy_simulation():
                         "  return output;\n"
                         "  \n"
                         "} catch (error) {\n"
-                        "  node.error('Error calculating delay: ' + error.message);\n"
+                        "  node.error('Error calculating delay: ' + error.message + ', payload: ' + JSON.stringify(msg.payload));\n"
                         "  return null;\n"
                         "}"
                     ),
@@ -357,55 +402,16 @@ def deploy_simulation():
             ])
             y += 80
 
-    # Add a debug node to monitor sim/stats/delay
-    debug_id = new_id()
-    all_nodes.append({
-        "id": debug_id,
-        "type": "debug",
-        "z": tab_id,
-        "name": "Stats Monitor",
-        "active": True,
-        "tosidebar": True,
-        "console": False,
-        "tostatus": True,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "payload.delay",
-        "statusType": "msg",
-        "x": 750,
-        "y": 60,
-        "wires": []
-    })
-
-    # Add MQTT in node for debugging
-    debug_mqtt_id = new_id()
-    all_nodes.append({
-        "id": debug_mqtt_id,
-        "type": "mqtt in",
-        "z": tab_id,
-        "name": "Monitor sim/stats/delay",
-        "topic": "sim/stats/delay",
-        "qos": "1",
-        "datatype": "json",
-        "broker": broker_config_id,
-        "nl": False,
-        "rap": True,
-        "rh": 0,
-        "inputs": 0,
-        "x": 540,
-        "y": 60,
-        "wires": [[debug_id]]
-    })
-
     # Deploy flows to Node-RED
     try:
         print(f"🚀 Deploying {len(all_nodes)} nodes to Node-RED...")
         print(f"   Published topics: {published_topics}")
         print(f"   Valid subscriber connections: {sum(len([t for t in sub['topics'] if t in published_topics]) for sub in sub_instances)}")
         
+        # Use 'flows' instead of 'full' to preserve existing MQTT connections
         resp = requests.post(
             f'{NODE_RED_URL}/flows',
-            headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'full'},
+            headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'flows'},
             json=all_nodes,
             timeout=30
         )
@@ -415,6 +421,10 @@ def deploy_simulation():
             print(f"   📊 Publishers: {len(pub_instances)}")
             print(f"   📊 Subscribers: {len(sub_instances)}")
             print(f"   📊 Topics: {len(published_topics)}")
+            
+            # Wait a moment for flows to start, then restart delay collector
+            time.sleep(2)
+            restart_delay_collector()
             
             # Add warnings about topic mismatches
             all_warnings = pub_warnings + sub_warnings
@@ -433,7 +443,7 @@ def deploy_simulation():
     except requests.RequestException as e:
         print(f"❌ Node-RED connection failed: {str(e)}")
         return jsonify(error=f"Node-RED connection failed: {str(e)}"), 500
-
+    
 # =============================================================================
 # SIMULATION CONTROL ROUTES
 # =============================================================================
@@ -476,8 +486,40 @@ def control_simulation(action):
 # MQTT DELAY COLLECTION
 # =============================================================================
 
+def restart_delay_collector():
+    """Restart the delay collector to ensure it's connected after flow deployment"""
+    global delay_collector_client
+    
+    try:
+        # Stop existing collector if running
+        if delay_collector_client:
+            try:
+                delay_collector_client.loop_stop()
+                delay_collector_client.disconnect()
+            except:
+                pass
+        
+        # Start new collector
+        print("🔄 Restarting delay collector...")
+        delay_collector_client = start_delay_collector('localhost', 1883, delay_data)
+        
+        if delay_collector_client:
+            print("✅ Delay collector restarted successfully")
+            return True
+        else:
+            print("❌ Failed to restart delay collector")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error restarting delay collector: {e}")
+        return False
+
 def start_delay_collector(broker_host, broker_port, delay_deque):
     """Start MQTT client to collect delay measurements"""
+    # Flask on host should always connect to localhost
+    actual_broker_host = Config.HOST_MQTT_HOST if broker_host in ['nanomq', 'mosquitto'] else broker_host
+    
+    print(f"🔗 Connecting delay collector to {actual_broker_host}:{broker_port}")
     # Use the new callback API version
     client = mqtt.Client(
         callback_api_version=CallbackAPIVersion.VERSION2,
@@ -488,6 +530,15 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
     # Store connection state
     client.connected = False
     client.reconnect_delay = 5
+
+    try:
+        client.connect(actual_broker_host, broker_port, 60)
+        client.loop_start()
+        print(f"🔄 Delay collector loop started for {actual_broker_host}:{broker_port}")
+        return client
+    except Exception as e:
+        print(f"❌ Failed to connect delay collector: {e}")
+        return None
     
     def on_connect(client, userdata, flags, reason_code, properties):
             if reason_code == 0:
@@ -499,15 +550,36 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
                 print(f"❌ Delay collector connection failed: {reason_code}")
                 client.connected = False
         
+    # Replace the on_message function in start_delay_collector with this:
+
     def on_message(client, userdata, msg):
-            try:
-                payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
-                payload = json.loads(payload_str)
-                payload['timestamp'] = time.time()
-                delay_deque.append(payload)
-                print(f"📨 Delay data received: {payload.get('delay', 'N/A')}ms from {payload.get('name', 'unknown')}")
-            except Exception as e:
-                print(f"❌ Delay parser error: {e}, payload: {msg.payload}")
+        try:
+            payload_str = msg.payload.decode('utf-8') if isinstance(msg.payload, bytes) else str(msg.payload)
+            
+            # Parse JSON payload
+            payload = json.loads(payload_str)
+            payload['timestamp'] = time.time()
+            
+            # Add to delay queue
+            delay_deque.append(payload)
+            
+            # Enhanced logging
+            delay_ms = payload.get('delay', 'N/A')
+            name = payload.get('name', 'unknown')
+            seq_id = payload.get('seq_id', 'N/A')
+            
+            print(f"📨 [DelayCollector] Received: {delay_ms}ms delay, seq:{seq_id}, from:{name}")
+            
+            # Also log queue size periodically
+            if len(delay_deque) % 50 == 0:
+                print(f"📊 [DelayCollector] Queue size: {len(delay_deque)} messages")
+                
+        except json.JSONDecodeError as e:
+            print(f"❌ [DelayCollector] JSON decode error: {e}")
+            print(f"   Raw payload: {msg.payload}")
+        except Exception as e:
+            print(f"❌ [DelayCollector] Message processing error: {e}")
+            print(f"   Topic: {msg.topic}, Payload: {msg.payload}")
         
     def on_disconnect(client, userdata, reason_code, properties):
             print(f"🔌 [DelayCollector] Disconnected from broker (rc={reason_code})")
@@ -540,6 +612,63 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
 
 # Global delay collector client
 delay_collector_client = None
+
+
+# Add this route to test the complete flow:
+
+@app.route('/test/complete_flow', methods=['POST'])
+def test_complete_flow():
+    """Test complete message flow including delay statistics"""
+    try:
+        # Clear existing delay data
+        delay_data.clear()
+        
+        # Create a test client
+        test_client = mqtt.Client(
+            callback_api_version=CallbackAPIVersion.VERSION2,
+            client_id=f"flow_test_{uuid.uuid4().hex[:8]}"
+        )
+        
+        test_client.connect('localhost', 1883, 60)
+        
+        # Publish a test message that matches Node-RED publisher format
+        test_payload = {
+            "ts_sent": int(time.time() * 1000),  # milliseconds
+            "seq_id": 1,
+            "name": "test_publisher",
+            "topic": "test/flow",
+            "data": "X" * 100
+        }
+        
+        print(f"🧪 [FlowTest] Publishing test message: {test_payload}")
+        
+        # Publish to a topic that should have subscribers
+        result = test_client.publish("test/flow", json.dumps(test_payload), qos=1)
+        result.wait_for_publish()
+        
+        test_client.disconnect()
+        
+        # Wait for delay collector to process
+        time.sleep(2)
+        
+        # Check if delay data was received
+        recent_delays = list(delay_data)[-5:] if delay_data else []
+        
+        return jsonify({
+            "success": True,
+            "test_payload": test_payload,
+            "delay_messages_received": len(recent_delays),
+            "recent_delays": recent_delays,
+            "collector_connected": bool(delay_collector_client and hasattr(delay_collector_client, 'connected') and delay_collector_client.connected)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 
 @app.route('/api/metrics')
 def get_delay_metrics():

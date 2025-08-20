@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  nanomq:
+    image: emqx/nanomq:latest
+    container_name: nanomq
+    ports:
+      - "1883:1883"      # MQTT port
+      - "8083:8083"      # WebSocket port
+      - "8883:8883"      # MQTT SSL port (optional)
+    networks:
+      - mqtt_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nanomq", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nodered:
+    image: nodered/node-red:latest
+    container_name: nodered
+    ports:
+      - "1880:1880"      # Node-RED UI
+    volumes:
+      - ./node-red-data:/data    # Persist flows and settings
+    environment:
+      - TZ=UTC
+    networks:
+      - mqtt_network
+    depends_on:
+      - nanomq
+    restart: unless-stopped
+
+networks:
+  mqtt_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
