@@ -2,7 +2,6 @@
 import csv
 import json
 import os
-from dotenv import load_dotenv
 import statistics
 import threading
 import time
@@ -22,24 +21,6 @@ from paho.mqtt.enums import CallbackAPIVersion
 from deployment.topic_manager import TopicManager
 from deployment.group_expander import GroupExpander
 from evaluation.controller import EvaluationController
-
-
-# Load environment variables
-load_dotenv()
-
-# Configuration for Docker networking
-class Config:
-    # When Flask is on host, Node-RED/NanoMQ in Docker
-    DOCKER_MQTT_HOST = os.getenv('DOCKER_MQTT_HOST', 'nanomq')  # Docker service name
-    DOCKER_NODE_RED_URL = os.getenv('DOCKER_NODE_RED_URL', 'http://nodered:1880')
-    
-    # For host access
-    HOST_MQTT_HOST = os.getenv('HOST_MQTT_HOST', 'localhost')
-    HOST_MQTT_PORT = int(os.getenv('HOST_MQTT_PORT', 1883))
-    NODE_RED_URL = os.getenv('NODE_RED_URL', 'http://localhost:1880')
-
-# Update the global NODE_RED_URL
-NODE_RED_URL = Config.NODE_RED_URL
 
 # Flask app initialization
 app = Flask(__name__, template_folder="frontend/templates", static_folder="frontend/static")
@@ -129,8 +110,6 @@ def expand_groups():
 # SIMULATION DEPLOYMENT ROUTES
 # =============================================================================
 
-# Replace your deploy_simulation function with this fixed version:
-
 @app.route('/deploy_simulation', methods=['POST'])
 def deploy_simulation():
     """Deploy simulation flows to Node-RED"""
@@ -142,20 +121,6 @@ def deploy_simulation():
     # Get broker configuration
     broker_host = data.get("broker_name", "localhost")
     broker_port = int(data.get("broker_port", 1883))
-
-    if broker_host.lower() in ['localhost', '127.0.0.1']:
-        # When Node-RED is in Docker and needs to connect to host
-        # Use the Docker service name if both are in Docker
-        broker_host_for_nodered = Config.DOCKER_MQTT_HOST  # This will be 'nanomq'
-    elif broker_host.lower() in get_docker_broker_names():
-        # If it's a known Docker broker, use the container name
-        broker_host_for_nodered = broker_host.lower()
-    else:
-        # For external brokers, use as-is
-        broker_host_for_nodered = broker_host
-    
-    print(f"🔧 [Docker Fix] Node-RED will connect to: {broker_host_for_nodered}:{broker_port}")
-    print(f"🔧 [Docker Fix] Flask will connect to: {Config.HOST_MQTT_HOST}:{broker_port}")
 
     # Expand groups into individual instances
     pub_expander = GroupExpander(mode="publisher")
@@ -172,7 +137,7 @@ def deploy_simulation():
     all_nodes.append({
         "id": tab_id,
         "type": "tab",
-        "label": f"Sim-{tab_id[:6]}",
+        "label": "Sim-AutoFlow",
         "disabled": False,
         "info": ""
     })
@@ -182,8 +147,8 @@ def deploy_simulation():
     all_nodes.append({
         "id": broker_config_id,
         "type": "mqtt-broker",
-        "name": f"{broker_host}_config",
-        "broker": broker_host_for_nodered,
+        "name": broker_host,
+        "broker": broker_host,
         "port": broker_port,
         "clientid": "",
         "usetls": False,
@@ -191,11 +156,6 @@ def deploy_simulation():
         "keepalive": 60,
         "cleansession": True
     })
-
-    # Collect all topics that are actually being published to
-    published_topics = set()
-    for pub in pub_instances:
-        published_topics.add(pub["topic"])
 
     # Add publisher nodes
     y = 80
@@ -210,7 +170,7 @@ def deploy_simulation():
                 "type": "inject",
                 "z": tab_id,
                 "name": pub["name"],
-                "props": [{"p":"payload"}, {"p":"topic", "vt":"str"}],
+                "props": [{"p":"payload"}],
                 "repeat": str(pub.get("interval", 1.0)),
                 "once": True,
                 "onceDelay": 0.1,
@@ -227,34 +187,27 @@ def deploy_simulation():
                 "z": tab_id,
                 "name": f"{pub['name']} Payload",
                 "func": (
-                    "// Initialize sequence counter\n"
                     "if (!global.get('seq')) global.set('seq', {});\n"
-                    f"var topic = '{pub['topic']}';\n"
-                    "if (!global.get('seq')[topic]) global.get('seq')[topic] = 0;\n"
-                    "global.get('seq')[topic]++;\n"
+                    f"var group = '{pub['topic']}';\n"
+                    "if (!global.get('seq')[group]) global.get('seq')[group] = 0;\n"
+                    "global.get('seq')[group]++;\n"
                     "\n"
                     "// Create payload with timestamp for latency measurement\n"
                     "msg.payload = {\n"
                     "  ts_sent: Date.now(),\n"
-                    "  seq_id: global.get('seq')[topic],\n"
+                    "  seq_id: global.get('seq')[group],\n"
                     f"  name: '{pub['name']}',\n"
                     f"  topic: '{pub['topic']}',\n"
                     f"  data: 'X'.repeat({pub.get('payload_size', 256)})\n"
                     "};\n"
                     "\n"
-                    "// Set topic\n"
                     f"msg.topic = '{pub['topic']}';\n"
                     "\n"
                     "// Debug logging\n"
-                    "node.log('Publishing #' + global.get('seq')[topic] + ' to ' + topic);\n"
+                    f"node.log('Publishing to {pub['topic']}: ' + JSON.stringify(msg.payload));\n"
                     "return msg;"
                 ),
                 "outputs": 1,
-                "timeout": 0,
-                "noerr": 0,
-                "initialize": "",
-                "finalize": "",
-                "libs": [],
                 "x": 340,
                 "y": y,
                 "wires": [[mqtt_id]]
@@ -267,11 +220,6 @@ def deploy_simulation():
                 "topic": pub["topic"],
                 "qos": str(pub.get("qos", 1)),
                 "retain": str(pub.get("retain", False)).lower(),
-                "respTopic": "",
-                "contentType": "",
-                "userProps": "",
-                "correl": "",
-                "expiry": "",
                 "broker": broker_config_id,
                 "x": 560,
                 "y": y,
@@ -280,16 +228,9 @@ def deploy_simulation():
         ])
         y += 60
 
-    # Add subscriber nodes - ONLY subscribe to topics that are actually published
+    # Add subscriber nodes
     for sub in sub_instances:
-        # Filter topics to only those that are actually being published
-        valid_topics = [t for t in sub["topics"] if t in published_topics]
-        
-        if not valid_topics:
-            print(f"⚠️  Warning: Subscriber {sub['name']} has no valid topics to subscribe to")
-            continue
-            
-        for topic in valid_topics:
+        for topic in sub["topics"]:
             mqtt_in_id = new_id()
             delay_func_id = new_id()
             mqtt_out_id = new_id()
@@ -304,10 +245,6 @@ def deploy_simulation():
                     "qos": str(sub.get("qos", 1)),
                     "datatype": "json",
                     "broker": broker_config_id,
-                    "nl": False,
-                    "rap": True,
-                    "rh": 0,
-                    "inputs": 0,
                     "x": 100,
                     "y": y,
                     "wires": [[delay_func_id]]
@@ -318,28 +255,28 @@ def deploy_simulation():
                     "z": tab_id,
                     "name": f"{sub['name']} DelayCalc",
                     "func": (
-                        "// Calculate message delay\n"
+                        "// Enhanced payload validation\n"
                         "try {\n"
                         "  var payload = msg.payload;\n"
                         "  \n"
-                        "  // Handle both string and object payloads\n"
+                        "  // Handle string payload\n"
                         "  if (typeof payload === 'string') {\n"
                         "    try {\n"
                         "      payload = JSON.parse(payload);\n"
                         "    } catch (e) {\n"
-                        "      node.error('Failed to parse payload as JSON: ' + e.message);\n"
+                        "      node.warn('Failed to parse JSON payload: ' + payload);\n"
                         "      return null;\n"
                         "    }\n"
                         "  }\n"
                         "  \n"
-                        "  // Validate payload\n"
+                        "  // Validate payload structure\n"
                         "  if (!payload || typeof payload !== 'object') {\n"
-                        "    node.error('Invalid payload type: ' + typeof payload);\n"
+                        "    node.warn('Invalid payload type: ' + typeof payload);\n"
                         "    return null;\n"
                         "  }\n"
                         "  \n"
                         "  if (!payload.ts_sent) {\n"
-                        "    node.error('Missing ts_sent in payload: ' + JSON.stringify(payload));\n"
+                        "    node.warn('Missing ts_sent in payload. Keys: ' + Object.keys(payload).join(', '));\n"
                         "    return null;\n"
                         "  }\n"
                         "  \n"
@@ -347,37 +284,36 @@ def deploy_simulation():
                         "  var now = Date.now();\n"
                         "  var delay = now - payload.ts_sent;\n"
                         "  \n"
-                        "  // Create output message for stats collector\n"
-                        "  var output = {\n"
+                        "  // Create standardized output for evaluation controller\n"
+                        "  var result = {\n"
                         "    topic: 'sim/stats/delay',\n"
-                        "    payload: JSON.stringify({\n"
+                        "    payload: {\n"
                         f"      name: '{sub['name']}',\n"
                         f"      subscriber_topic: '{topic}',\n"
                         "      delay: delay,\n"
-                        "      seq_id: payload.seq_id || 0,\n"
+                        "      seq_id: payload.seq_id || null,\n"
                         "      ts_sent: payload.ts_sent,\n"
                         "      ts_recv: now,\n"
                         "      publisher_name: payload.name || 'unknown',\n"
                         "      original_topic: payload.topic || msg.topic\n"
-                        "    })\n"
+                        "    }\n"
                         "  };\n"
                         "  \n"
-                        "  // Log success\n"
-                        "  node.log('Delay ' + delay + 'ms for seq ' + payload.seq_id + ' from ' + payload.name);\n"
-                        "  return output;\n"
+                        "  node.log('✅ Delay calculated: ' + delay + 'ms for ' + payload.name + ' → ' + result.payload.name);\n"
+                        "  return result;\n"
                         "  \n"
                         "} catch (error) {\n"
-                        "  node.error('Error calculating delay: ' + error.message + ', payload: ' + JSON.stringify(msg.payload));\n"
+                        "  node.error('Delay calculation error: ' + error.message);\n"
+                        "  node.warn('Problematic payload: ' + JSON.stringify(msg.payload));\n"
                         "  return null;\n"
                         "}"
                     ),
                     "outputs": 1,
-                    "timeout": 0,
                     "noerr": 0,
                     "initialize": "",
                     "finalize": "",
                     "libs": [],
-                    "x": 320,
+                    "x": 300,
                     "y": y,
                     "wires": [[mqtt_out_id]]
                 },
@@ -385,17 +321,12 @@ def deploy_simulation():
                     "id": mqtt_out_id,
                     "type": "mqtt out",
                     "z": tab_id,
-                    "name": f"→ sim/stats/delay",
+                    "name": f"Stats → sim/stats/delay",
                     "topic": "sim/stats/delay",
                     "qos": "1",
                     "retain": "false",
-                    "respTopic": "",
-                    "contentType": "",
-                    "userProps": "",
-                    "correl": "",
-                    "expiry": "",
                     "broker": broker_config_id,
-                    "x": 550,
+                    "x": 530,
                     "y": y,
                     "wires": []
                 }
@@ -405,45 +336,24 @@ def deploy_simulation():
     # Deploy flows to Node-RED
     try:
         print(f"🚀 Deploying {len(all_nodes)} nodes to Node-RED...")
-        print(f"   Published topics: {published_topics}")
-        print(f"   Valid subscriber connections: {sum(len([t for t in sub['topics'] if t in published_topics]) for sub in sub_instances)}")
-        
-        # Use 'flows' instead of 'full' to preserve existing MQTT connections
         resp = requests.post(
             f'{NODE_RED_URL}/flows',
-            headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'flows'},
+            headers={'Content-Type': 'application/json'},
             json=all_nodes,
             timeout=30
         )
-        
         if resp.status_code == 204:
             print("✅ Successfully deployed to Node-RED")
             print(f"   📊 Publishers: {len(pub_instances)}")
             print(f"   📊 Subscribers: {len(sub_instances)}")
-            print(f"   📊 Topics: {len(published_topics)}")
-            
-            # Wait a moment for flows to start, then restart delay collector
-            time.sleep(2)
-            restart_delay_collector()
-            
-            # Add warnings about topic mismatches
-            all_warnings = pub_warnings + sub_warnings
-            
-            # Check for subscribers with no matching publishers
-            for sub in sub_instances:
-                unmatched = [t for t in sub['topics'] if t not in published_topics]
-                if unmatched:
-                    all_warnings.append(f"Subscriber '{sub['name']}' is trying to listen to non-existent topics: {unmatched}")
-            
-            return jsonify(ok=True, warnings=all_warnings)
+            return jsonify(ok=True, warnings=pub_warnings + sub_warnings)
         else:
             print(f"❌ Node-RED deployment failed: {resp.status_code} - {resp.text}")
             return jsonify(error=f"Failed to deploy: {resp.text}"), 500
-            
     except requests.RequestException as e:
         print(f"❌ Node-RED connection failed: {str(e)}")
         return jsonify(error=f"Node-RED connection failed: {str(e)}"), 500
-    
+
 # =============================================================================
 # SIMULATION CONTROL ROUTES
 # =============================================================================
@@ -486,40 +396,8 @@ def control_simulation(action):
 # MQTT DELAY COLLECTION
 # =============================================================================
 
-def restart_delay_collector():
-    """Restart the delay collector to ensure it's connected after flow deployment"""
-    global delay_collector_client
-    
-    try:
-        # Stop existing collector if running
-        if delay_collector_client:
-            try:
-                delay_collector_client.loop_stop()
-                delay_collector_client.disconnect()
-            except:
-                pass
-        
-        # Start new collector
-        print("🔄 Restarting delay collector...")
-        delay_collector_client = start_delay_collector('localhost', 1883, delay_data)
-        
-        if delay_collector_client:
-            print("✅ Delay collector restarted successfully")
-            return True
-        else:
-            print("❌ Failed to restart delay collector")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Error restarting delay collector: {e}")
-        return False
-
 def start_delay_collector(broker_host, broker_port, delay_deque):
     """Start MQTT client to collect delay measurements"""
-    # Flask on host should always connect to localhost
-    actual_broker_host = Config.HOST_MQTT_HOST if broker_host in ['nanomq', 'mosquitto'] else broker_host
-    
-    print(f"🔗 Connecting delay collector to {actual_broker_host}:{broker_port}")
     # Use the new callback API version
     client = mqtt.Client(
         callback_api_version=CallbackAPIVersion.VERSION2,
@@ -530,15 +408,6 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
     # Store connection state
     client.connected = False
     client.reconnect_delay = 5
-
-    try:
-        client.connect(actual_broker_host, broker_port, 60)
-        client.loop_start()
-        print(f"🔄 Delay collector loop started for {actual_broker_host}:{broker_port}")
-        return client
-    except Exception as e:
-        print(f"❌ Failed to connect delay collector: {e}")
-        return None
     
     def on_connect(client, userdata, flags, reason_code, properties):
             if reason_code == 0:
@@ -550,36 +419,15 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
                 print(f"❌ Delay collector connection failed: {reason_code}")
                 client.connected = False
         
-    # Replace the on_message function in start_delay_collector with this:
-
     def on_message(client, userdata, msg):
-        try:
-            payload_str = msg.payload.decode('utf-8') if isinstance(msg.payload, bytes) else str(msg.payload)
-            
-            # Parse JSON payload
-            payload = json.loads(payload_str)
-            payload['timestamp'] = time.time()
-            
-            # Add to delay queue
-            delay_deque.append(payload)
-            
-            # Enhanced logging
-            delay_ms = payload.get('delay', 'N/A')
-            name = payload.get('name', 'unknown')
-            seq_id = payload.get('seq_id', 'N/A')
-            
-            print(f"📨 [DelayCollector] Received: {delay_ms}ms delay, seq:{seq_id}, from:{name}")
-            
-            # Also log queue size periodically
-            if len(delay_deque) % 50 == 0:
-                print(f"📊 [DelayCollector] Queue size: {len(delay_deque)} messages")
-                
-        except json.JSONDecodeError as e:
-            print(f"❌ [DelayCollector] JSON decode error: {e}")
-            print(f"   Raw payload: {msg.payload}")
-        except Exception as e:
-            print(f"❌ [DelayCollector] Message processing error: {e}")
-            print(f"   Topic: {msg.topic}, Payload: {msg.payload}")
+            try:
+                payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
+                payload = json.loads(payload_str)
+                payload['timestamp'] = time.time()
+                delay_deque.append(payload)
+                print(f"📨 Delay data received: {payload.get('delay', 'N/A')}ms from {payload.get('name', 'unknown')}")
+            except Exception as e:
+                print(f"❌ Delay parser error: {e}, payload: {msg.payload}")
         
     def on_disconnect(client, userdata, reason_code, properties):
             print(f"🔌 [DelayCollector] Disconnected from broker (rc={reason_code})")
@@ -612,63 +460,6 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
 
 # Global delay collector client
 delay_collector_client = None
-
-
-# Add this route to test the complete flow:
-
-@app.route('/test/complete_flow', methods=['POST'])
-def test_complete_flow():
-    """Test complete message flow including delay statistics"""
-    try:
-        # Clear existing delay data
-        delay_data.clear()
-        
-        # Create a test client
-        test_client = mqtt.Client(
-            callback_api_version=CallbackAPIVersion.VERSION2,
-            client_id=f"flow_test_{uuid.uuid4().hex[:8]}"
-        )
-        
-        test_client.connect('localhost', 1883, 60)
-        
-        # Publish a test message that matches Node-RED publisher format
-        test_payload = {
-            "ts_sent": int(time.time() * 1000),  # milliseconds
-            "seq_id": 1,
-            "name": "test_publisher",
-            "topic": "test/flow",
-            "data": "X" * 100
-        }
-        
-        print(f"🧪 [FlowTest] Publishing test message: {test_payload}")
-        
-        # Publish to a topic that should have subscribers
-        result = test_client.publish("test/flow", json.dumps(test_payload), qos=1)
-        result.wait_for_publish()
-        
-        test_client.disconnect()
-        
-        # Wait for delay collector to process
-        time.sleep(2)
-        
-        # Check if delay data was received
-        recent_delays = list(delay_data)[-5:] if delay_data else []
-        
-        return jsonify({
-            "success": True,
-            "test_payload": test_payload,
-            "delay_messages_received": len(recent_delays),
-            "recent_delays": recent_delays,
-            "collector_connected": bool(delay_collector_client and hasattr(delay_collector_client, 'connected') and delay_collector_client.connected)
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
-
-
 
 @app.route('/api/metrics')
 def get_delay_metrics():
@@ -770,19 +561,6 @@ def run_tests_in_background(job_id, args):
             print(f"🚀 [TestRunner] Starting evaluation for {broker_name} (job: {job_id})")
             print(f"   Host: {mqtt_host}:{broker_port}")
             print(f"   Duration: {duration}s")
-            
-            # Perform pre-flight checks
-            print("🔍 [TestRunner] Performing pre-flight checks...")
-            checks = preflight_check(mqtt_host, broker_port)
-            print(f"   Broker reachable: {'✅' if checks['broker_reachable'] else '❌'}")
-            print(f"   Node-RED connected: {'✅' if checks['node_red_connected'] else '❌'}")
-            print(f"   Flows deployed: {'✅' if checks['flows_deployed'] else '❌'}")
-            print(f"   Publishers active: {'✅' if checks['publishers_active'] else '❌'}")
-            print(f"   Delay collector: {'✅' if checks['delay_collector_active'] else '❌'}")
-            
-            # Warn but continue if checks fail
-            if not all(checks.values()):
-                print("⚠️  [TestRunner] Some pre-flight checks failed. Results may be incomplete.")
 
             # Verify container exists (if it's a Docker broker)
             container = None
@@ -856,39 +634,6 @@ def run_tests_in_background(job_id, args):
                 'error': f'Test execution error: {str(e)}',
                 'broker_name': args.get('broker_name', 'unknown')
             }
-
-@app.route('/test/publish', methods=['POST'])
-def test_publish():
-    """Manually publish a test message to verify flow"""
-    try:
-        test_client = mqtt.Client(
-            callback_api_version=CallbackAPIVersion.VERSION2,
-            client_id=f"test_publisher_{uuid.uuid4().hex[:8]}"
-        )
-        test_client.connect('localhost', 1883, 60)
-        
-        # Publish test message
-        test_payload = {
-            "ts_sent": time.time() * 1000,
-            "seq_id": 999,
-            "name": "test_publisher",
-            "topic": "test/topic",
-            "data": "X" * 100
-        }
-        
-        test_client.publish("test/topic", json.dumps(test_payload), qos=1)
-        test_client.disconnect()
-        
-        return jsonify({
-            "success": True,
-            "message": "Test message published",
-            "payload": test_payload
-        })
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
 
 @app.route('/run_tests', methods=['POST'])
 def run_tests():
@@ -992,99 +737,6 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
         return jsonify({"error": "Internal server error"}), 500
-
-def preflight_check(broker_host, broker_port):
-    """Perform pre-flight checks before evaluation"""
-    checks = {
-        "broker_reachable": False,
-        "node_red_connected": False,
-        "flows_deployed": False,
-        "publishers_active": False,
-        "delay_collector_active": False
-    }
-    
-    # Check broker
-    try:
-        import socket
-        sock = socket.create_connection((broker_host, broker_port), timeout=2)
-        sock.close()
-        checks["broker_reachable"] = True
-    except:
-        pass
-    
-    # Check Node-RED
-    try:
-        resp = requests.get(f'{NODE_RED_URL}/flows', timeout=2)
-        if resp.status_code == 200:
-            checks["node_red_connected"] = True
-            flows = resp.json()
-            
-            # Check for simulation nodes
-            has_publishers = any(n.get('type') == 'inject' and not n.get('disabled', False) for n in flows)
-            has_subscribers = any(n.get('type') == 'mqtt in' for n in flows)
-            checks["flows_deployed"] = has_publishers and has_subscribers
-            checks["publishers_active"] = has_publishers
-    except:
-        pass
-    
-    # Check delay collector
-    checks["delay_collector_active"] = bool(delay_collector_client and hasattr(delay_collector_client, 'connected') and delay_collector_client.connected)
-    
-    return checks
-
-@app.route('/debug/messages', methods=['GET'])
-def debug_messages():
-    """Debug endpoint to check message flow"""
-    return jsonify({
-        "delay_collector_connected": delay_collector_client.connected if delay_collector_client else False,
-        "total_delay_messages": len(delay_data),
-        "recent_messages": list(delay_data)[-10:] if delay_data else [],
-        "active_jobs": list(job_status.keys()),
-        "timestamp": datetime.now().isoformat()
-    })
-
-@app.route('/debug/node-red', methods=['GET'])
-def debug_node_red():
-    """Check Node-RED flow status"""
-    try:
-        resp = requests.get(f'{NODE_RED_URL}/flows', timeout=5)
-        flows = resp.json()
-        
-        # Find simulation nodes
-        sim_nodes = {
-            'publishers': [],
-            'subscribers': [],
-            'stats_publishers': []
-        }
-        
-        for node in flows:
-            if node.get('type') == 'inject':
-                sim_nodes['publishers'].append({
-                    'name': node.get('name', 'Unknown'),
-                    'enabled': not node.get('disabled', False),
-                    'repeat': node.get('repeat', 'none')
-                })
-            elif node.get('type') == 'mqtt in':
-                sim_nodes['subscribers'].append({
-                    'name': node.get('name', 'Unknown'),
-                    'topic': node.get('topic', 'Unknown')
-                })
-            elif node.get('type') == 'mqtt out' and 'sim/stats/delay' in str(node.get('topic', '')):
-                sim_nodes['stats_publishers'].append({
-                    'name': node.get('name', 'Unknown'),
-                    'topic': node.get('topic', 'Unknown')
-                })
-        
-        return jsonify({
-            "node_red_connected": True,
-            "total_nodes": len(flows),
-            "simulation_nodes": sim_nodes
-        })
-    except Exception as e:
-        return jsonify({
-            "node_red_connected": False,
-            "error": str(e)
-        })
 
     # =============================================================================
     # MAIN ENTRY POINT

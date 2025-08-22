@@ -1,0 +1,27 @@
+{
+  "job_id": "f042d3376e434599bcb7bfe5b867b6df",
+  "broker_name": "localhost",
+  "timestamp": "2025-08-22T11:06:37.197353",
+  "latency_count": 0,
+  "latency_processed_count": 0,
+  "latency_error_count": 0,
+  "latency_avg_delay": 0.0,
+  "latency_min_delay": 0.0,
+  "latency_max_delay": 0.0,
+  "latency_jitter": 0.0,
+  "latency_diagnostic_info": {
+    "no_messages_received": true,
+    "evaluation_duration": 60,
+    "broker_host": "localhost",
+    "broker_port": 1883
+  },
+  "throughput_throughput_mps": 0.0,
+  "throughput_total_messages": 0,
+  "availability_total_checks": 30,
+  "availability_failures": 0,
+  "availability_recoveries": 0,
+  "availability_downtime_events": 0,
+  "availability_avg_downtime_sec": 0.0,
+  "availability_mtbf_sec": 0.0,
+  "availability_mttr_sec": 0.0
+}
