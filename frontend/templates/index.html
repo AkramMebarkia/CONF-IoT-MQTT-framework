@@ -460,7 +460,6 @@
             <option value="1" selected>QoS 1</option>
             <option value="2">QoS 2</option>
           </select>
-        </select>
         </div>
       </div>
 
@@ -596,13 +595,9 @@
                 <i class="bi bi-speedometer2"></i> Run Evaluation
               </h5>
               <div class="row g-2 mb-3">
-                <div class="col-6">
+                <div class="col-6  w-100">
                   <label class="form-label small">Duration (s)</label>
                   <input id="evalDuration" type="number" class="form-control" value="60" min="5" />
-                </div>
-                <div class="col-6">
-                  <label class="form-label small">Payload (B)</label>
-                  <input id="evalPayloadSize" type="number" class="form-control" value="256" min="1" />
                 </div>
               </div>
               <button class="btn btn-primary w-100" onclick="startEvaluation()">
@@ -992,7 +987,8 @@
     }
 
     function getCheckedTopics(containerId) {
-      return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(cb => cb.value);
+        return Array.from(document.querySelectorAll(`#${containerId} .topic-item.selected`))
+            .map(item => item.dataset.topic);
     }
 
     // Publisher/Subscriber management
@@ -1159,13 +1155,11 @@
       const broker = document.getElementById("brokerName").value.trim();
       const port = parseInt(document.getElementById("brokerPort").value, 10) || 1883;
       const duration = parseInt(document.getElementById("evalDuration").value, 10) || 60;
-      const payloadSize = parseInt(document.getElementById("evalPayloadSize").value, 10) || 256;
 
       const payload = {
         broker_name: broker,
         broker_port: port,
         duration: duration,
-        payload_size: payloadSize
       };
 
       const modal = new bootstrap.Modal(document.getElementById('progressModal'));

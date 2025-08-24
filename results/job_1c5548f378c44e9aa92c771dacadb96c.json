@@ -1,0 +1,21 @@
+{
+  "job_id": "1c5548f378c44e9aa92c771dacadb96c",
+  "broker_name": "localhost",
+  "timestamp": "2025-08-23T08:24:14.771412",
+  "latency_count": 2581,
+  "latency_processed_count": 3798,
+  "latency_error_count": 1217,
+  "latency_avg_delay": 576.61,
+  "latency_min_delay": 0.71,
+  "latency_max_delay": 1046.42,
+  "latency_jitter": 288.79,
+  "throughput_throughput_mps": 10.0,
+  "throughput_total_messages": 3798,
+  "availability_total_checks": 30,
+  "availability_failures": 0,
+  "availability_recoveries": 0,
+  "availability_downtime_events": 0,
+  "availability_avg_downtime_sec": 0.0,
+  "availability_mtbf_sec": 0.0,
+  "availability_mttr_sec": 0.0
+}
