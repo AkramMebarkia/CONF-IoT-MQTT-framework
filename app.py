@@ -159,6 +159,15 @@ def deploy_simulation():
 
     # Add publisher nodes
     y = 80
+    
+    # Group publishers by their original group for shared sequence counters
+    publisher_groups = {}
+    for pub in pub_instances:
+        group = pub.get("group", "default")
+        if group not in publisher_groups:
+            publisher_groups[group] = []
+        publisher_groups[group].append(pub)
+    
     for pub in pub_instances:
         inject_id = new_id()
         function_id = new_id()
@@ -169,9 +178,10 @@ def deploy_simulation():
                 "id": inject_id,
                 "type": "inject",
                 "z": tab_id,
-                "name": pub["name"],
-                "props": [{"p":"payload"}],
-                "repeat": str(pub.get("interval", 1.0)),
+                "name": f"{pub['name']} Timer",
+                "props": [{"p": "payload"}],
+                "repeat": str(pub.get("interval", 1.0)),  # Use direct interval
+                "crontab": "",
                 "once": True,
                 "onceDelay": 0.1,
                 "topic": "",
@@ -185,29 +195,46 @@ def deploy_simulation():
                 "id": function_id,
                 "type": "function",
                 "z": tab_id,
-                "name": f"{pub['name']} Payload",
-                "func": (
-                    "if (!global.get('seq')) global.set('seq', {});\n"
-                    f"var group = '{pub['topic']}';\n"
-                    "if (!global.get('seq')[group]) global.get('seq')[group] = 0;\n"
-                    "global.get('seq')[group]++;\n"
-                    "\n"
-                    "// Create payload with timestamp for latency measurement\n"
-                    "msg.payload = {\n"
-                    "  ts_sent: Date.now(),\n"
-                    "  seq_id: global.get('seq')[group],\n"
-                    f"  name: '{pub['name']}',\n"
-                    f"  topic: '{pub['topic']}',\n"
-                    f"  data: 'X'.repeat({pub.get('payload_size', 256)})\n"
-                    "};\n"
-                    "\n"
-                    f"msg.topic = '{pub['topic']}';\n"
-                    "\n"
-                    "// Debug logging\n"
-                    f"node.log('Publishing to {pub['topic']}: ' + JSON.stringify(msg.payload));\n"
-                    "return msg;"
-                ),
+                "name": f"{pub['name']} Generator",
+                "func": f"""
+        // Simple message generation - NO BATCHING
+        var pubName = '{pub['name']}';
+        var topic = '{pub['topic']}';
+        var payloadSize = {pub.get('payload_size', 256)};
+
+        // Initialize sequence counter
+        if (!global.get('seq')) {{
+            global.set('seq', {{}});
+        }}
+        if (!global.get('seq')[pubName]) {{
+            global.get('seq')[pubName] = 0;
+        }}
+
+        global.get('seq')[pubName]++;
+
+        // Create single message with current timestamp
+        var payload = {{
+            ts_sent: Date.now(),
+            seq_id: global.get('seq')[pubName],
+            name: pubName,
+            topic: topic,
+            data: 'X'.repeat(payloadSize)
+        }};
+
+        // Log every 10th message
+        if (global.get('seq')[pubName] % 10 === 0) {{
+            node.log(pubName + ' sent message #' + global.get('seq')[pubName]);
+        }}
+
+        return {{
+            topic: topic,
+            payload: payload,
+            qos: {pub.get('qos', 1)},
+            retain: {str(pub.get('retain', False)).lower()}
+        }};
+        """,
                 "outputs": 1,
+                "noerr": 0,
                 "x": 340,
                 "y": y,
                 "wires": [[mqtt_id]]
@@ -280,7 +307,6 @@ def deploy_simulation():
                         "    return null;\n"
                         "  }\n"
                         "  \n"
-                        "  // CRITICAL FIX: Ensure publisher_name is correctly extracted\n"
                         "  var publisherName = payload.name;  // This is the PUBLISHER name from original message\n"
                         "  if (!publisherName) {\n"
                         "    node.warn('Missing publisher name in original message');\n"
@@ -293,7 +319,10 @@ def deploy_simulation():
                         "  \n"
                         "  // Validate delay\n"
                         "  if (delay < 0) {\n"
-                        "    node.warn('Negative delay calculated: ' + delay);\n"
+                        "    delay = Math.abs(delay);\n"
+                        "    node.warn('Clock skew detected: ' + delay + 'ms');\n"
+                        "  } else if (delay > 10000) { \n"
+                        "    node.warn('High delay detected: ' + delay + 'ms - possible stale message');\n"
                         "    return null;\n"
                         "  }\n"
                         "  \n"
@@ -442,14 +471,17 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
                 client.connected = False
         
     def on_message(client, userdata, msg):
-            try:
-                payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
-                payload = json.loads(payload_str)
-                payload['timestamp'] = time.time()
-                delay_deque.append(payload)
-                print(f"📨 Delay data received: {payload.get('delay', 'N/A')}ms from {payload.get('name', 'unknown')}")
-            except Exception as e:
-                print(f"❌ Delay parser error: {e}, payload: {msg.payload}")
+        try:
+            payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
+            payload = json.loads(payload_str)
+            payload['timestamp'] = time.time()
+            delay_deque.append(payload)
+            
+            # FIX: Use correct field name for publisher
+            publisher_name = payload.get('publisher_name', 'unknown')
+            print(f"📨 Delay data received: {payload.get('delay', 'N/A')}ms from {publisher_name}")
+        except Exception as e:
+            print(f"❌ Delay parser error: {e}, payload: {msg.payload}")
         
     def on_disconnect(client, userdata, reason_code, properties):
             print(f"🔌 [DelayCollector] Disconnected from broker (rc={reason_code})")
