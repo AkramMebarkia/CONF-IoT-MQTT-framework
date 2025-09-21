@@ -249,17 +249,16 @@ def deploy_simulation():
                     "y": y,
                     "wires": [[delay_func_id]]
                 },
+                # In your app.py, replace the delay function creation with:
                 {
                     "id": delay_func_id,
                     "type": "function",
                     "z": tab_id,
                     "name": f"{sub['name']} DelayCalc",
                     "func": (
-                        "// Enhanced payload validation\n"
                         "try {\n"
                         "  var payload = msg.payload;\n"
                         "  \n"
-                        "  // Handle string payload\n"
                         "  if (typeof payload === 'string') {\n"
                         "    try {\n"
                         "      payload = JSON.parse(payload);\n"
@@ -269,7 +268,6 @@ def deploy_simulation():
                         "    }\n"
                         "  }\n"
                         "  \n"
-                        "  // Validate payload structure\n"
                         "  if (!payload || typeof payload !== 'object') {\n"
                         "    node.warn('Invalid payload type: ' + typeof payload);\n"
                         "    return null;\n"
@@ -280,11 +278,9 @@ def deploy_simulation():
                         "    return null;\n"
                         "  }\n"
                         "  \n"
-                        "  // Calculate delay\n"
                         "  var now = Date.now();\n"
                         "  var delay = now - payload.ts_sent;\n"
                         "  \n"
-                        "  // Create standardized output for evaluation controller\n"
                         "  var result = {\n"
                         "    topic: 'sim/stats/delay',\n"
                         "    payload: {\n"
@@ -299,12 +295,11 @@ def deploy_simulation():
                         "    }\n"
                         "  };\n"
                         "  \n"
-                        "  node.log('✅ Delay calculated: ' + delay + 'ms for ' + payload.name + ' → ' + result.payload.name);\n"
+                        "  node.log('Delay calculated: ' + delay + 'ms, Publisher: ' + payload.name + ', Subscriber: ' + result.payload.name);\n"
                         "  return result;\n"
                         "  \n"
                         "} catch (error) {\n"
                         "  node.error('Delay calculation error: ' + error.message);\n"
-                        "  node.warn('Problematic payload: ' + JSON.stringify(msg.payload));\n"
                         "  return null;\n"
                         "}"
                     ),

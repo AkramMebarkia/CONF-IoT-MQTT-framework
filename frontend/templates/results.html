@@ -29,6 +29,43 @@
     .status-good { color: #28a745; }
     .status-warning { color: #ffc107; }
     .status-bad { color: #dc3545; }
+    
+    /* New styles for enhanced metrics */
+    .metrics-enhancement {
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      border-radius: 10px;
+      padding: 15px;
+      margin: 20px 0;
+      border-left: 4px solid #2196f3;
+    }
+    
+    .enhanced-metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    .enhanced-metric:last-child {
+      border-bottom: none;
+    }
+    
+    .enhanced-metric-label {
+      font-weight: 500;
+      color: #1976d2;
+    }
+    
+    .enhanced-metric-value {
+      font-weight: bold;
+      color: #0d47a1;
+    }
+    
+    .percentile-highlight {
+      background: rgba(76, 175, 80, 0.1);
+      border-radius: 6px;
+      padding: 2px 8px;
+    }
   </style>
 </head>
 <body>
@@ -45,7 +82,7 @@
     <div class="row mb-4">
       <div class="col-md-3">
         <div class="metric-card text-center">
-          <div class="metric-value">{{ stats.latency_count or 0 }}</div>
+          <div class="metric-value">{{ stats.latency_unique_publisher_messages or stats.latency_count or 0 }}</div>
           <div class="metric-label">Total Messages</div>
         </div>
       </div>
@@ -57,7 +94,7 @@
       </div>
       <div class="col-md-3">
         <div class="metric-card text-center">
-          <div class="metric-value">{{ stats.throughput_throughput_mps or 0 }}</div>
+          <div class="metric-value">{{ stats.throughput_publisher_throughput_mps or stats.throughput_throughput_mps or 0 }}</div>
           <div class="metric-label">Messages/sec</div>
         </div>
       </div>
@@ -70,6 +107,51 @@
         </div>
       </div>
     </div>
+
+    <!-- Enhanced Metrics Panel (New Addition) -->
+    {% if stats.latency_unique_publisher_messages or stats.latency_p50 or stats.latency_p95 or stats.latency_p99 %}
+    <div class="metrics-enhancement">
+      <h5 class="mb-3">📈 Enhanced Metrics Analysis</h5>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <h6>Message Flow Accuracy</h6>
+          {% if stats.latency_unique_publisher_messages %}
+          <div class="enhanced-metric">
+            <span class="enhanced-metric-label">Unique Publisher Messages:</span>
+            <span class="enhanced-metric-value">{{ stats.latency_unique_publisher_messages }}</span>
+          </div>
+          <div class="enhanced-metric">
+            <span class="enhanced-metric-label">Delay Measurements:</span>
+            <span class="enhanced-metric-value">{{ stats.latency_count or 0 }}</span>
+          </div>
+          <div class="enhanced-metric">
+            <span class="enhanced-metric-label">Subscriber Multiplier:</span>
+            <span class="enhanced-metric-value">{{ "%.1f"|format((stats.latency_count or 0) / (stats.latency_unique_publisher_messages or 1)) }}x</span>
+          </div>
+          {% endif %}
+        </div>
+        
+        <div class="col-md-6">
+          <h6>Latency Distribution</h6>
+          {% if stats.latency_p50 or stats.latency_p95 or stats.latency_p99 %}
+          <div class="enhanced-metric">
+            <span class="enhanced-metric-label">50th Percentile (Median):</span>
+            <span class="enhanced-metric-value percentile-highlight">{{ stats.latency_p50 or 0 }} ms</span>
+          </div>
+          <div class="enhanced-metric">
+            <span class="enhanced-metric-label">95th Percentile:</span>
+            <span class="enhanced-metric-value percentile-highlight">{{ stats.latency_p95 or 0 }} ms</span>
+          </div>
+          <div class="enhanced-metric">
+            <span class="enhanced-metric-label">99th Percentile:</span>
+            <span class="enhanced-metric-value percentile-highlight">{{ stats.latency_p99 or 0 }} ms</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Detailed Metrics -->
     <div class="row">
@@ -110,7 +192,7 @@
               </tr>
               <tr>
                 <td>Error Rate</td>
-                <td class="text-end"><strong>{{ stats.latency_error_rate or 0 }}%</strong></td>
+                <td class="text-end"><strong>{{ "%.2f"|format(((stats.latency_error_count or 0) / (stats.latency_processed_count or 1)) * 100) }}%</strong></td>
               </tr>
             </table>
           </div>
@@ -210,6 +292,30 @@
         </div>
       </div>
     </div>
+
+    <!-- Publisher Breakdown (if available) -->
+    {% if stats.latency_publisher_breakdown %}
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">📊 Publisher Message Breakdown</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              {% for publisher, count in stats.latency_publisher_breakdown.items() %}
+              <div class="col-md-3 mb-2">
+                <div class="small bg-light p-2 rounded text-center">
+                  <strong>{{ publisher }}:</strong><br>{{ count }} messages
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Warning if no data -->
     {% if stats.latency_count == 0 %}
