@@ -78,7 +78,7 @@ class EvaluationController:
                     self.throughput_tracker.record_delay_message(payload)
                     
                     # Debug: Show what we received
-                    print(f"   Delay: {payload.get('delay', 'N/A')}ms, From: {payload.get('name', 'unknown')}, Topic: {payload.get('subscriber_topic', 'unknown')}")
+                    print(f"   Delay: {payload.get('delay', 'N/A')}ms, From: {payload.get('publisher_name', 'unknown')}, Topic: {payload.get('subscriber_topic', 'unknown')}")
                 except Exception as e:
                     print(f"   Payload parse error: {e}")
                     # Fallback to old method

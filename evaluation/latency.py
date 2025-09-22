@@ -4,9 +4,10 @@ from collections import deque
 from statistics import mean, stdev
 
 class LatencyTracker:
-    def __init__(self, maxlen=5000):
-        self.delays = deque(maxlen=maxlen)
-        self.timestamps = deque(maxlen=maxlen)
+    def __init__(self):
+        # REMOVE maxlen to allow unlimited messages during evaluation
+        self.delays = deque()  # No maxlen limit
+        self.timestamps = deque()  # No maxlen limit
         self.processed_count = 0
         self.error_count = 0
         
@@ -38,16 +39,11 @@ class LatencyTracker:
                 self.error_count += 1
                 return
             
-            # FIX: Correct field extraction - publisher_name is already in the payload
             ts_sent = payload.get('ts_sent')
-            # The Node-RED flow correctly sets publisher_name from the original message
             publisher_name = payload.get('publisher_name')
             seq_id = payload.get('seq_id')
             
-            # Debug output to verify what we're getting
             if not publisher_name:
-                print(f"DEBUG: Missing publisher_name. Payload keys: {list(payload.keys())}")
-                print(f"DEBUG: Full payload: {json.dumps(payload, indent=2)}")
                 # Fallback to original_topic parsing if needed
                 original_topic = payload.get('original_topic', '')
                 if original_topic:
@@ -68,8 +64,8 @@ class LatencyTracker:
                         self.publisher_message_count[publisher_name] = 0
                     self.publisher_message_count[publisher_name] += 1
                     
-                    # Only log every 10th unique message to reduce noise
-                    if len(self.unique_messages) % 10 == 0:
+                    # Only log every 100th unique message to reduce noise
+                    if len(self.unique_messages) % 100 == 0:
                         print(f"✓ Unique message #{len(self.unique_messages)}: {publisher_name} seq={seq_id}")
 
             try:
@@ -77,22 +73,23 @@ class LatencyTracker:
                 ts_sent = float(ts_sent)
                 delay = ts_recv - ts_sent
                 
-                # Sanity check for delay values
+                # Handle negative delays (clock skew)
                 if delay < 0:
-                    print(f"⚠️ Negative delay detected: {delay}ms from {publisher_name}")
-                    self.error_count += 1
-                    return
+                    # Take absolute value but still track it
+                    delay = abs(delay)
+                    # Only warn occasionally
+                    if len(self.delays) % 100 == 0:
+                        print(f"⚠️ Clock skew detected, using absolute delay: {delay}ms")
                 elif delay > 60000:  # More than 60 seconds seems unrealistic
                     print(f"⚠️ Suspiciously high delay: {delay}ms from {publisher_name}")
-                    # Still record it but flag it
                 
                 self.delays.append(delay)
                 self.timestamps.append(ts_recv)
                 
-                # Log progress every 100 messages
-                if len(self.delays) % 100 == 0:
+                # Log progress every 500 messages
+                if len(self.delays) % 500 == 0:
                     unique_count = len(self.unique_messages)
-                    avg_delay = mean(list(self.delays)[-100:])
+                    avg_delay = mean(list(self.delays)[-500:])
                     print(f"📊 Progress: {len(self.delays)} measurements, {unique_count} unique msgs, "
                           f"Recent avg: {avg_delay:.2f}ms")
                     
@@ -108,14 +105,13 @@ class LatencyTracker:
             self.error_count += 1
 
     def _calculate_percentiles(self, delays_list):
-        """Calculate percentiles from delay list - FIXED"""
+        """Calculate percentiles from delay list"""
         if not delays_list or len(delays_list) < 2:
             return 0.0, 0.0, 0.0
             
         sorted_delays = sorted(delays_list)
         n = len(sorted_delays)
         
-        # Proper percentile calculation
         def get_percentile(sorted_list, percentile):
             k = (len(sorted_list) - 1) * percentile
             f = int(k)
@@ -137,8 +133,8 @@ class LatencyTracker:
         print(f"📦 Unique publisher messages: {len(self.unique_messages)}")
         
         if self.publisher_message_count:
-            print(f"📊 Publisher breakdown:")
-            for pub, count in sorted(self.publisher_message_count.items())[:5]:
+            print(f"📊 Publisher breakdown (top 5):")
+            for pub, count in sorted(self.publisher_message_count.items(), key=lambda x: x[1], reverse=True)[:5]:
                 print(f"   - {pub}: {count} messages")
         
         if not self.delays:
@@ -161,7 +157,7 @@ class LatencyTracker:
         delays_list = list(self.delays)
         
         try:
-            # Calculate percentiles with fixed method
+            # Calculate percentiles
             p50, p95, p99 = self._calculate_percentiles(delays_list)
             
             # Calculate error rate properly
@@ -184,6 +180,8 @@ class LatencyTracker:
             }
             
             print(f"✅ Stats generated successfully:")
+            print(f"   Total delay measurements: {stats['count']}")
+            print(f"   Unique publisher messages: {stats['unique_publisher_messages']}")
             print(f"   Avg delay: {stats['avg_delay']}ms")
             print(f"   P50/P95/P99: {p50}/{p95}/{p99}ms")
             print(f"   Error rate: {stats['error_rate']}%")

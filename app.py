@@ -319,9 +319,10 @@ def deploy_simulation():
                         "  \n"
                         "  // Validate delay\n"
                         "  if (delay < 0) {\n"
-                        "    delay = Math.abs(delay);\n"
-                        "    node.warn('Clock skew detected: ' + delay + 'ms');\n"
-                        "  } else if (delay > 10000) { \n"
+                        "    // delay = Math.abs(delay);\n"
+                        "    node.warn('Clock skew detected: ' + (0 - delay) + 'ms- ignoring massage');\n"
+                        "    return null;\n"
+                        "  } else if (delay > 60000) { \n"
                         "    node.warn('High delay detected: ' + delay + 'ms - possible stale message');\n"
                         "    return null;\n"
                         "  }\n"
@@ -815,8 +816,8 @@ if __name__ == '__main__':
             print("   Make sure your MQTT broker is running on localhost:1883")
         
         # START THE DELAY COLLECTOR
-        print("🚀 Starting delay collector...")
-        delay_collector_client = start_delay_collector('localhost', 1883, delay_data)
+        # print("🚀 Starting delay collector...")
+        # delay_collector_client = start_delay_collector('localhost', 1883, delay_data)
         
         if delay_collector_client:
             print("✅ Delay collector started successfully")
