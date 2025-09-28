@@ -180,7 +180,7 @@ def deploy_simulation():
                 "z": tab_id,
                 "name": f"{pub['name']} Timer",
                 "props": [{"p": "payload"}],
-                "repeat": str(pub.get("interval", 1.0)),  # Use direct interval
+                "repeat": str(pub.get("interval", 1.0)), 
                 "crontab": "",
                 "once": True,
                 "onceDelay": 0.1,
@@ -387,7 +387,7 @@ def deploy_simulation():
 
     # Deploy flows to Node-RED
     try:
-        print(f"🚀 Deploying {len(all_nodes)} nodes to Node-RED...")
+        print(f"Deploying {len(all_nodes)} nodes to Node-RED...")
         resp = requests.post(
             f'{NODE_RED_URL}/flows',
             headers={'Content-Type': 'application/json'},
@@ -395,15 +395,15 @@ def deploy_simulation():
             timeout=30
         )
         if resp.status_code == 204:
-            print("✅ Successfully deployed to Node-RED")
-            print(f"   📊 Publishers: {len(pub_instances)}")
-            print(f"   📊 Subscribers: {len(sub_instances)}")
+            print("Successfully deployed to Node-RED")
+            print(f"   Publishers: {len(pub_instances)}")
+            print(f"   Subscribers: {len(sub_instances)}")
             return jsonify(ok=True, warnings=pub_warnings + sub_warnings)
         else:
-            print(f"❌ Node-RED deployment failed: {resp.status_code} - {resp.text}")
+            print(f"Node-RED deployment failed: {resp.status_code} - {resp.text}")
             return jsonify(error=f"Failed to deploy: {resp.text}"), 500
     except requests.RequestException as e:
-        print(f"❌ Node-RED connection failed: {str(e)}")
+        print(f"Node-RED connection failed: {str(e)}")
         return jsonify(error=f"Node-RED connection failed: {str(e)}"), 500
 
 # =============================================================================
@@ -463,12 +463,12 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
     
     def on_connect(client, userdata, flags, reason_code, properties):
             if reason_code == 0:
-                print(f"✅ Delay collector connected to {broker_host}:{broker_port}")
+                print(f"Delay collector connected to {broker_host}:{broker_port}")
                 client.connected = True
                 result = client.subscribe("sim/stats/delay", qos=1)
-                print("✅ Subscribed to sim/stats/delay")
+                print("ubscribed to sim/stats/delay")
             else:
-                print(f"❌ Delay collector connection failed: {reason_code}")
+                print(f"Delay collector connection failed: {reason_code}")
                 client.connected = False
         
     def on_message(client, userdata, msg):
@@ -477,15 +477,13 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
             payload = json.loads(payload_str)
             payload['timestamp'] = time.time()
             delay_deque.append(payload)
-            
-            # FIX: Use correct field name for publisher
             publisher_name = payload.get('publisher_name', 'unknown')
-            print(f"📨 Delay data received: {payload.get('delay', 'N/A')}ms from {publisher_name}")
+            print(f"Delay data received: {payload.get('delay', 'N/A')}ms from {publisher_name}")
         except Exception as e:
-            print(f"❌ Delay parser error: {e}, payload: {msg.payload}")
+            print(f"Delay parser error: {e}, payload: {msg.payload}")
         
     def on_disconnect(client, userdata, reason_code, properties):
-            print(f"🔌 [DelayCollector] Disconnected from broker (rc={reason_code})")
+            print(f"[DelayCollector] Disconnected from broker (rc={reason_code})")
             client.connected = False
             if reason_code != 0:
                 # Attempt reconnection after delay
@@ -494,23 +492,23 @@ def start_delay_collector(broker_host, broker_port, delay_deque):
                 try:
                     client.reconnect()
                 except Exception as e:
-                    print(f"❌ [DelayCollector] Reconnection failed: {e}")
+                    print(f"[DelayCollector] Reconnection failed: {e}")
         
     client.on_connect = on_connect
     client.on_message = on_message
     client.on_disconnect = on_disconnect
         
-        # Enable automatic reconnection
+    # Enable automatic reconnection
     client.reconnect_delay_set(min_delay=1, max_delay=120)
         
     try:
-            print(f"🔗 Connecting delay collector to {broker_host}:{broker_port}")
+            print(f"Connecting delay collector to {broker_host}:{broker_port}")
             client.connect(broker_host, broker_port, 60)
             client.loop_start()
-            print(f"🔄 Delay collector loop started for {broker_host}:{broker_port}")
+            print(f"Delay collector loop started for {broker_host}:{broker_port}")
             return client
     except Exception as e:
-            print(f"❌ Failed to connect delay collector: {e}")
+            print(f"Failed to connect delay collector: {e}")
             return None
 
 # Global delay collector client
@@ -521,9 +519,9 @@ def get_delay_metrics():
         """Get latest delay metrics"""
         return jsonify(list(delay_data)[-100:])
 
-    # =============================================================================
-    # DOCKER MONITORING FUNCTIONS
-    # =============================================================================
+# =============================================================================
+# DOCKER MONITORING FUNCTIONS
+# =============================================================================
 
 def monitor_container_stats(container_id, csv_path, stop_event):
         """Monitor Docker container resource usage and save to CSV"""
@@ -596,9 +594,9 @@ def monitor_container_stats(container_id, csv_path, stop_event):
         finally:
             stop_event.set()
 
-    # =============================================================================
-    # EVALUATION AND TESTING ROUTES
-    # =============================================================================
+# =============================================================================
+# EVALUATION AND TESTING ROUTES
+# =============================================================================
 
 def get_docker_broker_names():
         """Return a set of container names that are known brokers"""
@@ -613,7 +611,7 @@ def run_tests_in_background(job_id, args):
             mqtt_host = 'localhost' if broker_name in get_docker_broker_names() else broker_name
             duration = int(args.get('duration', 60))
 
-            print(f"🚀 [TestRunner] Starting evaluation for {broker_name} (job: {job_id})")
+            print(f"   [TestRunner] Starting evaluation for {broker_name} (job: {job_id})")
             print(f"   Host: {mqtt_host}:{broker_port}")
             print(f"   Duration: {duration}s")
 
@@ -671,10 +669,10 @@ def run_tests_in_background(job_id, args):
                 'resource_csv': resource_csv
             }
             
-            print(f"✅ [TestRunner] Evaluation completed for {broker_name}")
+            print(f"[TestRunner] Evaluation completed for {broker_name}")
             
         except Exception as e:
-            print(f"❌ [TestRunner] Error: {e}")
+            print(f"[TestRunner] Error: {e}")
             import traceback
             traceback.print_exc()
             
@@ -729,9 +727,9 @@ def results(job_id):
             stats=stats,
             resource_data=json.dumps(resource_data))
 
-    # =============================================================================
-    # VERIFICATION ROUTES
-    # =============================================================================
+# =============================================================================
+# VERIFICATION ROUTES
+# =============================================================================
 @app.route('/verify_flow', methods=['GET'])
 def verify_flow():
         """Verify Node-RED flow is working"""
@@ -763,9 +761,9 @@ def verify_flow():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    # =============================================================================
-    # MAIN ROUTES
-    # =============================================================================
+# =============================================================================
+# MAIN ROUTES
+# =============================================================================
 
 @app.route('/')
 def index():
@@ -781,9 +779,9 @@ def health():
             "active_jobs": len([j for j in job_status.values() if j.get('status') == 'running'])
         })
 
-    # =============================================================================
-    # ERROR HANDLERS
-    # =============================================================================
+# =============================================================================
+# ERROR HANDLERS
+# =============================================================================
 
 @app.errorhandler(404)
 def not_found(error):
@@ -793,16 +791,16 @@ def not_found(error):
 def internal_error(error):
         return jsonify({"error": "Internal server error"}), 500
 
-    # =============================================================================
-    # MAIN ENTRY POINT
-    # =============================================================================
+# =============================================================================
+# MAIN ENTRY POINT
+# =============================================================================
 
 if __name__ == '__main__':
         # Ensure results directory exists
         os.makedirs('results', exist_ok=True)
         
         # Check if MQTT broker is running
-        print("🔍 Checking MQTT broker connectivity...")
+        print("Checking MQTT broker connectivity...")
         test_client = mqtt.Client(
             callback_api_version=CallbackAPIVersion.VERSION2,
             client_id="test_connection"
@@ -810,23 +808,23 @@ if __name__ == '__main__':
         try:
             test_client.connect('localhost', 1883, 60)
             test_client.disconnect()
-            print("✅ MQTT broker is accessible")
+            print("MQTT broker is accessible")
         except Exception as e:
-            print(f"⚠️  WARNING: Cannot connect to MQTT broker: {e}")
+            print(f"WARNING: Cannot connect to MQTT broker: {e}")
             print("   Make sure your MQTT broker is running on localhost:1883")
         
         # START THE DELAY COLLECTOR
-        # print("🚀 Starting delay collector...")
+        # print("Starting delay collector...")
         # delay_collector_client = start_delay_collector('localhost', 1883, delay_data)
         
         if delay_collector_client:
-            print("✅ Delay collector started successfully")
+            print("Delay collector started successfully")
         else:
-            print("❌ WARNING: Delay collector failed to start!")
-            print("   The application will continue but delay metrics won't be collected")
+            print("WARNING: Delay collector failed to start!")
+            print("The application will continue but delay metrics won't be collected")
         
-        print("🌐 Starting Flask app...")
-        print("   Access the application at: http://localhost:5000")
+        print("Starting Flask app...")
+        print("Access the application at: http://localhost:5000")
         
         # Run Flask app
         app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)

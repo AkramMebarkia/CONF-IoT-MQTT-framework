@@ -10,8 +10,8 @@ class GroupExpander:
         warnings = []
         stats = {}
 
-        print(f"🔧 [GroupExpander] Expanding {len(groups)} groups for {self.mode}s")
-        print(f"   Mapping strategy: {self.mapping_strategy}")
+        print(f"[GroupExpander] Expanding {len(groups)} groups for {self.mode}s")
+        print(f"Mapping strategy: {self.mapping_strategy}")
 
         for group in groups:
             base_name = group.get("group_name", "Unnamed")
@@ -21,7 +21,7 @@ class GroupExpander:
             # Get mapping strategy - allow per-group override
             group_strategy = group.get("mapping", self.mapping_strategy)
 
-            print(f"   🔧 Processing group '{base_name}': {count} instances, {len(topics)} topics, strategy: {group_strategy}")
+            print(f"   Processing group '{base_name}': {count} instances, {len(topics)} topics, strategy: {group_strategy}")
 
             # Publishers: use smart mapping
             if self.mode == "publisher":
@@ -58,14 +58,14 @@ class GroupExpander:
                     }
                     expanded.append(instance)
                     
-                print(f"     ✅ Created {len(assignments)} publisher assignments")
+                print(f"     Created {len(assignments)} publisher assignments")
                 print(f"        Active publishers: {stats[base_name]['active_publishers']}/{count}")
                 
                 # Add warning if not all publishers are active (only for 1to1 mode)
                 if group_strategy == "1to1" and stats[base_name]['active_publishers'] < count:
                     warning = f"[{base_name}] Only {stats[base_name]['active_publishers']}/{count} publishers active due to 1:1 mapping"
                     warnings.append(warning)
-                    print(f"     ⚠️ {warning}")
+                    print(f"{warning}")
 
             # Subscribers: assign all selected topics to each subscriber (unchanged)
             elif self.mode == "subscriber":
@@ -78,11 +78,11 @@ class GroupExpander:
                         "qos": group.get("qos", 1)
                     }
                     expanded.append(instance)
-                    print(f"     ✅ Subscriber: {name} ← {len(topics)} topics")
+                    print(f"     Subscriber: {name} ← {len(topics)} topics")
 
-        print(f"🔧 [GroupExpander] Expansion complete: {len(expanded)} instances created")
+        print(f"[GroupExpander] Expansion complete: {len(expanded)} instances created")
         if self.mode == "publisher":
-            print(f"   📊 Publisher Statistics:")
+            print(f"   Publisher Statistics:")
             for group_name, group_stats in stats.items():
                 print(f"      {group_name}: {group_stats['assignments']} assignments from {group_stats['total_publishers']} publishers")
         

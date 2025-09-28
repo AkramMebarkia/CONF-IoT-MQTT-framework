@@ -69,7 +69,7 @@ class EvaluationController:
                 # Process the message
                 self.latency_tracker.handle_message(msg)
                 
-                # NEW: Extract payload and pass to throughput tracker
+                # Extract payload and pass to throughput tracker
                 try:
                     payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
                     payload = json.loads(payload_str)
@@ -153,7 +153,7 @@ class EvaluationController:
                 rate = (current_count - last_count) / (current_time - last_report_time)
                 remaining = self.duration - elapsed
                 
-                # NEW: Also report unique publisher messages
+                # Also report unique publisher messages
                 unique_msgs = len(self.latency_tracker.unique_messages)
                 print(f"Progress: {elapsed}s/{self.duration}s | Delay msgs: {current_count} | Unique publisher msgs: {unique_msgs} | Rate: {rate:.1f} msg/s | Remaining: {remaining}s")
                 
@@ -207,7 +207,7 @@ class EvaluationController:
                 'broker_port': self.broker_port
             }
 
-        # NEW: Enhanced statistics aggregation
+        # statistics aggregation
         self.aggregator.add_module_stats("latency", latency_stats)
         self.aggregator.add_module_stats("throughput", throughput_stats)
         self.aggregator.add_module_stats("availability", availability_stats)

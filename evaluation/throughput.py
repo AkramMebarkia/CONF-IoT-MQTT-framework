@@ -8,7 +8,7 @@ class ThroughputTracker:
         self.start_time = None
         self.message_count = 0
         
-        # NEW: Track unique publisher messages instead of delay messages
+        # Track unique publisher messages instead of delay messages
         self.unique_publisher_messages = set()  # Store (publisher_name, seq_id) tuples
         self.publisher_timestamps = deque(maxlen=window_size * 10)
 
@@ -23,7 +23,7 @@ class ThroughputTracker:
         self.timestamps.append(now)
         self.message_count += 1
         
-        # NEW: Extract and record unique publisher message
+        # Extract and record unique publisher message
         try:
             publisher_name = delay_payload.get('publisher_name') or delay_payload.get('name', 'unknown')
             seq_id = delay_payload.get('seq_id')

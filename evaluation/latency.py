@@ -5,7 +5,7 @@ from statistics import mean, stdev
 
 class LatencyTracker:
     def __init__(self):
-        # REMOVE maxlen to allow unlimited messages during evaluation
+        # REMOVE maxlen to allow unlimited messages during evaluation, please refer to the last git commit to see previous version with limited maxlen.
         self.delays = deque()  # No maxlen limit
         self.timestamps = deque()  # No maxlen limit
         self.processed_count = 0
@@ -79,9 +79,9 @@ class LatencyTracker:
                     delay = abs(delay)
                     # Only warn occasionally
                     if len(self.delays) % 100 == 0:
-                        print(f"⚠️ Clock skew detected, using absolute delay: {delay}ms")
+                        print(f"Clock skew detected, using absolute delay: {delay}ms")
                 elif delay > 60000:  # More than 60 seconds seems unrealistic
-                    print(f"⚠️ Suspiciously high delay: {delay}ms from {publisher_name}")
+                    print(f"Suspiciously high delay: {delay}ms from {publisher_name}")
                 
                 self.delays.append(delay)
                 self.timestamps.append(ts_recv)
@@ -90,7 +90,7 @@ class LatencyTracker:
                 if len(self.delays) % 500 == 0:
                     unique_count = len(self.unique_messages)
                     avg_delay = mean(list(self.delays)[-500:])
-                    print(f"📊 Progress: {len(self.delays)} measurements, {unique_count} unique msgs, "
+                    print(f"Progress: {len(self.delays)} measurements, {unique_count} unique msgs, "
                           f"Recent avg: {avg_delay:.2f}ms")
                     
             except (ValueError, TypeError) as e:
@@ -129,11 +129,11 @@ class LatencyTracker:
         return round(p50, 2), round(p95, 2), round(p99, 2)
 
     def get_stats(self):
-        print(f"📈 Generating stats: {len(self.delays)} delays, {self.error_count} errors")
-        print(f"📦 Unique publisher messages: {len(self.unique_messages)}")
+        print(f"Generating stats: {len(self.delays)} delays, {self.error_count} errors")
+        print(f"Unique publisher messages: {len(self.unique_messages)}")
         
         if self.publisher_message_count:
-            print(f"📊 Publisher breakdown (top 5):")
+            print(f"Publisher breakdown (top 5):")
             for pub, count in sorted(self.publisher_message_count.items(), key=lambda x: x[1], reverse=True)[:5]:
                 print(f"   - {pub}: {count} messages")
         
@@ -179,7 +179,7 @@ class LatencyTracker:
                 "publisher_breakdown": dict(self.publisher_message_count)
             }
             
-            print(f"✅ Stats generated successfully:")
+            print(f"   Stats generated successfully:")
             print(f"   Total delay measurements: {stats['count']}")
             print(f"   Unique publisher messages: {stats['unique_publisher_messages']}")
             print(f"   Avg delay: {stats['avg_delay']}ms")
@@ -189,7 +189,7 @@ class LatencyTracker:
             return stats
             
         except Exception as e:
-            print(f"❌ Error calculating stats: {e}")
+            print(f"Error calculating stats: {e}")
             import traceback
             traceback.print_exc()
             
