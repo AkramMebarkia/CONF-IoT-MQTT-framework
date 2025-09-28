@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # NanoMQ Broker
   nanomq:
     image: emqx/nanomq:latest
     container_name: nanomq
@@ -10,6 +11,11 @@ services:
       - "8883:8883"      # MQTT SSL port (optional)
     networks:
       - mqtt_network
+    volumes:
+      - /etc/localtime:/etc/localtime:ro  # Sync time with host
+      - /etc/timezone:/etc/timezone:ro    # Sync timezone with host
+    environment:
+      - TZ=UTC
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "nanomq", "ping"]
@@ -17,6 +23,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # Node-RED
   nodered:
     image: nodered/node-red:latest
     container_name: nodered
@@ -24,6 +31,8 @@ services:
       - "1880:1880"      # Node-RED UI
     volumes:
       - ./node-red-data:/data    # Persist flows and settings
+      - /etc/localtime:/etc/localtime:ro  # Sync time with host
+      - /etc/timezone:/etc/timezone:ro    # Sync timezone with host
     environment:
       - TZ=UTC
     networks:
@@ -31,6 +40,82 @@ services:
     depends_on:
       - nanomq
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:1880"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Alternative brokers for testing (commented out by default)
+  
+  # mosquitto:
+  #   image: eclipse-mosquitto:latest
+  #   container_name: mosquitto
+  #   ports:
+  #     - "1884:1883"
+  #   networks:
+  #     - mqtt_network
+  #   volumes:
+  #     - ./mosquitto/config:/mosquitto/config
+  #     - ./mosquitto/data:/mosquitto/data
+  #     - ./mosquitto/log:/mosquitto/log
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /etc/timezone:/etc/timezone:ro
+  #   environment:
+  #     - TZ=UTC
+  #   restart: unless-stopped
+
+  # emqx:
+  #   image: emqx/emqx:latest
+  #   container_name: emqx
+  #   ports:
+  #     - "1885:1883"
+  #     - "18083:18083"  # Dashboard
+  #   networks:
+  #     - mqtt_network
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /etc/timezone:/etc/timezone:ro
+  #   environment:
+  #     - TZ=UTC
+  #     - EMQX_ALLOW_ANONYMOUS=true
+  #   restart: unless-stopped
+
+  # hivemq:
+  #   image: hivemq/hivemq4:latest
+  #   container_name: hivemq
+  #   ports:
+  #     - "1886:1883"
+  #     - "8080:8080"  # Control Center
+  #   networks:
+  #     - mqtt_network
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /etc/timezone:/etc/timezone:ro
+  #   environment:
+  #     - TZ=UTC
+  #   restart: unless-stopped
+
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   container_name: rabbitmq
+  #   ports:
+  #     - "1887:1883"     # MQTT
+  #     - "5672:5672"     # AMQP
+  #     - "15672:15672"   # Management UI
+  #   networks:
+  #     - mqtt_network
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /etc/timezone:/etc/timezone:ro
+  #   environment:
+  #     - TZ=UTC
+  #     - RABBITMQ_DEFAULT_USER=admin
+  #     - RABBITMQ_DEFAULT_PASS=admin
+  #   command: >
+  #     bash -c "rabbitmq-plugins enable rabbitmq_mqtt rabbitmq_management &&
+  #              rabbitmq-server"
+  #   restart: unless-stopped
 
 networks:
   mqtt_network:

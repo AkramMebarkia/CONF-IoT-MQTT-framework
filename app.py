@@ -646,6 +646,7 @@ def run_tests_in_background(job_id, args):
                 broker_host=mqtt_host,
                 broker_port=broker_port,
                 duration=duration,
+                warmup=60,
                 job_id=job_id
             )
             
