@@ -33,6 +33,11 @@ job_status = {}
 # Configuration constants
 NODE_RED_URL = 'http://localhost:1880'
 
+# Number of latency records to sends to the flask app
+BATCH_SIZE = 100
+
+
+
 # Broker container IDs
 def get_broker_container(broker_name):
     try:
@@ -256,11 +261,15 @@ def deploy_simulation():
         ])
         y += 60
 
-    # Add subscriber nodes
+# Updated subscriber node creation for deploy_simulation function
+# Replace the subscriber section in your app.py with this:
+
+    # Add subscriber nodes (starting at line ~325 in app.py)
     for sub in sub_instances:
         for topic in sub["topics"]:
             mqtt_in_id = new_id()
             delay_func_id = new_id()
+            http_req_id = new_id()  # New HTTP request node
 
             all_nodes.extend([
                 {
@@ -270,7 +279,7 @@ def deploy_simulation():
                     "name": f"{sub['name']} ← {topic}",
                     "topic": topic,
                     "qos": str(sub.get("qos", 1)),
-                    "datatype": "json",
+                    "datatype": "buffer",  # Changed to buffer to handle binary data
                     "broker": broker_config_id,
                     "x": 100,
                     "y": y,
@@ -281,47 +290,77 @@ def deploy_simulation():
                     "type": "function",
                     "z": tab_id,
                     "name": f"{sub['name']} DelayCalc",
-                    "func": (
-                        "// Measure latency directly on subscriber and post to Flask collector\n"
-                        "try {\n"
-                        "  const buf = Buffer.from(msg.payload);\n"
-                        "  const ts_sent = Number(buf.readBigInt64BE(0));\n"
-                        "  const now = Date.now();\n"
-                        "  const latency = now - ts_sent;\n"
-                        "\n"
-                        "  if (latency < 0 || latency > 60000) {\n"
-                        "    node.warn(`Invalid delay ${latency}ms`);\n"
-                        "    return null;\n"
-                        "  }\n"
-                        "\n"
-                        "  node.log(`Latency ${latency}ms for ${msg.topic}`);\n"
-                        "\n"
-                        "  // Post latency to Flask via HTTP\n"
-                        "  const axios = require('axios');\n"
-                        "  axios.post('http://localhost:5000/api/latency', {\n"
-                        "    subscriber: node.name,\n"
-                        "    topic: msg.topic,\n"
-                        "    delay: latency,\n"
-                        "    ts: now\n"
-                        "  }).then(res => {\n"
-                        "    //node.log(`POST ok ${latency}ms`);\n"
-                        "  }).catch(err => {\n"
-                        "    node.error('HTTP post failed: ' + err.message);\n"
-                        "  });\n"
-                        "\n"
-                        "  return null;\n"
-                        "} catch (e) {\n"
-                        "  node.error('Latency calc failed: ' + e.message);\n"
-                        "  return null;\n"
-                        "}"
-                    ),
-                    "outputs": 0,
+                    "func": "// ---- N-sample batch HTTP POST (no axios) ----\n"
+                    "// Configurable batch size from Flask:\n"
+                    f"const N = {BATCH_SIZE};\n"
+                    "\n"
+                    "// Per-subscriber buffer key\n"
+                    f"const bufKey = '{sub['name']}_latBuf';\n"
+                    "\n"
+                    "let buf = context.get(bufKey) || [];\n"
+                    "let count = context.get('count') || 0;\n"
+                    "\n"
+                    "try {\n"
+                    "  const b = Buffer.isBuffer(msg.payload) ? msg.payload : Buffer.from(msg.payload);\n"
+                    "  const ts_sent = Number(b.readBigInt64BE(0));\n"
+                    "  const now = Date.now();\n"
+                    "  const latency = now - ts_sent;\n"
+                    "\n"
+                    "  if (latency < 0 || latency > 60000) {\n"
+                    "    node.warn(`Invalid delay ${latency}ms`);\n"
+                    "    return null;\n"
+                    "  }\n"
+                    "\n"
+                    "  // Light logging\n"
+                    "  count += 1;\n"
+                    "  if (count % 10 === 0) node.log(`[${count}] Latency ${latency}ms for ${msg.topic}`);\n"
+                    "  context.set('count', count);\n"
+                    "\n"
+                    f"  // Buffer this sample\n"
+                    f"  buf.push({{ subscriber: '{sub['name']}', topic: msg.topic, delay: latency, ts: now }});\n"
+                    "  context.set(bufKey, buf);\n"
+                    "\n"
+                    "  // Emit HTTP request only when we have N samples\n"
+                    "  if (buf.length >= N) {\n"
+                    "    msg.url = 'http://host.docker.internal:5000/api/latency_batch';\n"
+                    "    msg.method = 'POST';\n"
+                    "    msg.headers = { 'Content-Type': 'application/json' };\n"
+                    "    msg.payload = buf;   // send the whole array\n"
+                    "    context.set(bufKey, []); // reset buffer AFTER staging the msg\n"
+                    "    return msg;\n"
+                    "  }\n"
+                    "\n"
+                    "  return null; // not enough samples yet\n"
+                    "\n"
+                    "} catch (e) {\n"
+                    "  node.error('Latency calc failed: ' + e.message);\n"
+                    "  return null;\n"
+                    "}",
+                    "outputs": 1,
                     "noerr": 0,
                     "initialize": "",
                     "finalize": "",
                     "libs": [],
                     "x": 300,
-                    "y": y
+                    "y": y,
+                    "wires": [[http_req_id]]  # Wire to HTTP request node
+                },
+                {
+                    "id": http_req_id,
+                    "type": "http request",
+                    "z": tab_id,
+                    "name": "Post to Flask",
+                    "method": "use",  # Will use method from msg
+                    "ret": "txt",
+                    "paytoqs": "ignore",
+                    "url": "",  # Will use URL from msg
+                    "tls": "",
+                    "persist": False,
+                    "proxy": "",
+                    "authType": "",
+                    "x": 500,
+                    "y": y,
+                    "wires": [[]]  # No output needed
                 }
             ])
             y += 80
@@ -462,22 +501,43 @@ def get_delay_metrics():
         """Get latest delay metrics"""
         return jsonify(list(delay_data)[-100:])
 
-
 @app.route('/api/latency', methods=['POST'])
 def receive_latency():
-    """Receive latency measurements from subscribers (HTTP POST)"""
+    """Receive single latency measurement"""
     try:
-        data = request.get_json()
-        delay = float(data.get('delay', 0))
+        data = request.get_json(force=True)
         delay_data.append({
             'subscriber': data.get('subscriber', 'unknown'),
             'topic': data.get('topic', 'unknown'),
-            'delay': delay,
-            'timestamp': data.get('ts', time.time())
+            'delay': float(data.get('delay', 0)),
+            'timestamp': data.get('ts') or data.get('timestamp') or time.time()
         })
         return jsonify(ok=True)
     except Exception as e:
         print(f"[LatencyReceiver] Error: {e}")
+        return jsonify(error=str(e)), 400
+
+
+
+@app.route('/api/latency_batch', methods=['POST'])
+def receive_latency_batch():
+    """Receive a batch (array) of latency measurements"""
+    try:
+        batch = request.get_json(force=True)
+        if not isinstance(batch, list):
+            return jsonify(error="Expected JSON array"), 400
+
+        now_ts = time.time()
+        for rec in batch:
+            delay_data.append({
+                'subscriber': rec.get('subscriber', 'unknown'),
+                'topic': rec.get('topic', 'unknown'),
+                'delay': float(rec.get('delay', 0)),
+                'timestamp': rec.get('ts') or rec.get('timestamp') or now_ts
+            })
+        return jsonify(ok=True, received=len(batch))
+    except Exception as e:
+        print(f"[LatencyBatchReceiver] Error: {e}")
         return jsonify(error=str(e)), 400
 
 
@@ -608,7 +668,8 @@ def run_tests_in_background(job_id, args):
                 broker_host=mqtt_host,
                 broker_port=broker_port,
                 duration=duration,
-                job_id=job_id
+                job_id=job_id,
+                delay_queue=delay_data
             )
             
             eval_results = controller.run()
@@ -632,6 +693,7 @@ def run_tests_in_background(job_id, args):
             }
             
             print(f"[TestRunner] Evaluation completed for {broker_name}")
+            requests.post('http://localhost:5000/simulation/stop')
             
         except Exception as e:
             print(f"[TestRunner] Error: {e}")

@@ -11,7 +11,7 @@ from evaluation.stats import StatsAggregator
 
 
 class EvaluationController:
-    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results"):
+    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results", delay_queue=None):
         self.broker_host = broker_host
         self.broker_port = broker_port
         self.duration = duration
@@ -20,6 +20,7 @@ class EvaluationController:
         self.connected = False
         self.message_count = 0
         self.connection_error = None
+        self.delay_queue = delay_queue
 
         # Trackers
         self.latency_tracker = LatencyTracker()
@@ -147,8 +148,20 @@ class EvaluationController:
             current_time = time.time()
             current_count = self.message_count
             elapsed = int(current_time - start_time)
+
+                # drain HTTP-collected latency records into the tracker
+            drained = 0
+            if self.delay_queue is not None:
+                while True:
+                    try:
+                        rec = self.delay_queue.popleft()
+                        self.latency_tracker.handle_message(rec)
+                        self.throughput_tracker.record_message()
+                        drained += 1
+                    except IndexError:
+                        break
+            self.message_count += drained
             
-            # Report progress every 5 seconds
             # Report progress every 5 seconds
             if current_time - last_report_time >= 5:
                 rate = (current_count - last_count) / (current_time - last_report_time)
