@@ -19,13 +19,12 @@ class LatencyTracker:
         try:
             self.processed_count += 1
             
-            # Handle both string and bytes payload
+            # Parse payload
             if isinstance(msg.payload, bytes):
                 payload_str = msg.payload.decode('utf-8')
             else:
                 payload_str = str(msg.payload)
             
-            # Parse JSON with better error handling
             try:
                 payload = json.loads(payload_str)
             except json.JSONDecodeError as e:
@@ -33,68 +32,63 @@ class LatencyTracker:
                 self.error_count += 1
                 return
             
-            # Validate payload structure
             if not isinstance(payload, dict):
                 print(f"Payload is not dict: {type(payload)}")
                 self.error_count += 1
                 return
             
-            ts_sent = payload.get('ts_sent')
+            # ✅ USE THE DELAY ALREADY CALCULATED BY NODE-RED SUBSCRIBER
+            delay = payload.get('delay')  # This is the CORRECT value!
             publisher_name = payload.get('publisher_name')
             seq_id = payload.get('seq_id')
             
+            if delay is None:
+                print(f"Missing delay in payload keys: {list(payload.keys())}")
+                self.error_count += 1
+                return
+            
             if not publisher_name:
-                # Fallback to original_topic parsing if needed
                 original_topic = payload.get('original_topic', '')
                 if original_topic:
                     publisher_name = f"publisher_{original_topic.replace('/', '_')}"
             
-            if ts_sent is None:
-                print(f"Missing timestamp in payload keys: {list(payload.keys())}")
-                self.error_count += 1
-                return
-
-            # Track unique publisher messages to get accurate count
+            # Track unique publisher messages
             if publisher_name and seq_id is not None:
                 message_key = (publisher_name, seq_id)
                 if message_key not in self.unique_messages:
                     self.unique_messages.add(message_key)
-                    # Count unique messages per publisher
                     if publisher_name not in self.publisher_message_count:
                         self.publisher_message_count[publisher_name] = 0
                     self.publisher_message_count[publisher_name] += 1
                     
-                    # Only log every 100th unique message to reduce noise
                     if len(self.unique_messages) % 100 == 0:
                         print(f"✓ Unique message #{len(self.unique_messages)}: {publisher_name} seq={seq_id}")
-
+            
             try:
-                ts_recv = time.time() * 1000  # ms
-                ts_sent = float(ts_sent)
-                delay = ts_recv - ts_sent
+                delay = float(delay)
                 
-                # Handle negative delays (clock skew)
+                # Sanity check (but don't need to worry about negative delays anymore!)
                 if delay < 0:
-                    # Take absolute value but still track it
-                    delay = abs(delay)
-                    # Only warn occasionally
-                    if len(self.delays) % 100 == 0:
-                        print(f"Clock skew detected, using absolute delay: {delay}ms")
-                elif delay > 60000:  # More than 60 seconds seems unrealistic
+                    print(f"WARNING: Negative delay received: {delay}ms (Node-RED clock issue)")
+                    self.error_count += 1
+                    return
+                
+                if delay > 60000:  # More than 60 seconds
                     print(f"Suspiciously high delay: {delay}ms from {publisher_name}")
+                    # Still record it, might be legitimate under load
                 
                 self.delays.append(delay)
-                self.timestamps.append(ts_recv)
+                self.timestamps.append(time.time() * 1000)  # Just for tracking when we received it
                 
                 # Log progress every 500 messages
                 if len(self.delays) % 500 == 0:
                     unique_count = len(self.unique_messages)
                     avg_delay = mean(list(self.delays)[-500:])
                     print(f"Progress: {len(self.delays)} measurements, {unique_count} unique msgs, "
-                          f"Recent avg: {avg_delay:.2f}ms")
+                        f"Recent avg: {avg_delay:.2f}ms")
                     
             except (ValueError, TypeError) as e:
-                print(f"Timestamp conversion error: {e}")
+                print(f"Delay conversion error: {e}")
                 self.error_count += 1
                 return
 
