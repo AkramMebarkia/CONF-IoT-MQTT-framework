@@ -4,8 +4,8 @@ import uuid
 import json
 import paho.mqtt.client as mqtt
 
-from evaluation.latency import LatencyTracker
-from evaluation.throughput import ThroughputTracker
+from evaluation.latency import EnhancedLatencyTracker
+from evaluation.throughput import FixedThroughputTracker
 from evaluation.availability import AvailabilityMonitor
 from evaluation.stats import StatsAggregator
 
@@ -23,8 +23,8 @@ class EvaluationController:
         self.delay_queue = delay_queue
 
         # Trackers
-        self.latency_tracker = LatencyTracker()
-        self.throughput_tracker = ThroughputTracker()
+        self.latency_tracker = EnhancedLatencyTracker()
+        self.throughput_tracker = FixedThroughputTracker()
         self.availability_monitor = AvailabilityMonitor()
 
         # MQTT - Create unique client ID

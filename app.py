@@ -203,42 +203,51 @@ def deploy_simulation():
                 "z": tab_id,
                 "name": f"{pub['name']} Generator",
                 "func": f"""
-        // Simple message generation - NO BATCHING
-        var pubName = '{pub['name']}';
-        var topic = '{pub['topic']}';
-        var payloadSize = {pub.get('payload_size', 256)};
+// Enhanced message generation with metadata header
+var pubName = '{pub['name']}';
+var topic = '{pub['topic']}';
+var payloadSize = {pub.get('payload_size', 256)};
 
-        // Initialize sequence counter
-        if (!global.get('seq')) {{
-            global.set('seq', {{}});
-        }}
-        if (!global.get('seq')[pubName]) {{
-            global.get('seq')[pubName] = 0;
-        }}
+// Initialize sequence counter
+if (!global.get('seq')) {{
+    global.set('seq', {{}});
+}}
+if (!global.get('seq')[pubName]) {{
+    global.get('seq')[pubName] = 0;
+}}
 
-        global.get('seq')[pubName]++;
+global.get('seq')[pubName]++;
+var seqId = global.get('seq')[pubName];
 
-        // Create 8-byte timestamp header + binary payload
-        var buffer = Buffer.alloc(8 + payloadSize);
-        var now = BigInt(Date.now());
-        buffer.writeBigInt64BE(now, 0);
-        buffer.fill('X', 8);  // fill payload section
+// --- Create binary buffer ---
+// Format: [8 bytes timestamp][4 bytes seq_id][1 byte name_length][publisher_name][payload...]
+var pubNameBuf = Buffer.from(pubName, 'utf8');
+var headerSize = 8 + 4 + 1 + pubNameBuf.length;
+var buffer = Buffer.alloc(Math.max(headerSize, payloadSize));
 
-        var payload = buffer; // raw binary
+var now = BigInt(Date.now());
+buffer.writeBigInt64BE(now, 0);
+buffer.writeUInt32BE(seqId, 8);
+buffer.writeUInt8(pubNameBuf.length, 12);
+pubNameBuf.copy(buffer, 13);
 
+// Fill the rest with data
+if (payloadSize > headerSize) {{
+    buffer.fill('X', headerSize);
+}}
 
-        // Log every 10th message
-        if (global.get('seq')[pubName] % 10 === 0) {{
-            node.log(pubName + ' sent message #' + global.get('seq')[pubName]);
-        }}
+// Optional: log every 10th message
+if (seqId % 10 === 0) {{
+    node.log(pubName + ' sent message #' + seqId + ' to ' + topic);
+}}
 
-        return {{
-            topic: topic,
-            payload: payload,
-            qos: {pub.get('qos', 1)},
-            retain: {str(pub.get('retain', False)).lower()}
-        }};
-        """,
+return {{
+    topic: topic,
+    payload: buffer,
+    qos: {pub.get('qos', 1)},
+    retain: {str(pub.get('retain', False)).lower()},
+}};
+""",
                 "outputs": 1,
                 "noerr": 0,
                 "x": 340,
@@ -265,11 +274,12 @@ def deploy_simulation():
 # Replace the subscriber section in your app.py with this:
 
     # Add subscriber nodes (starting at line ~325 in app.py)
+# Add subscriber nodes (complete with HTTP POST stage)
     for sub in sub_instances:
         for topic in sub["topics"]:
             mqtt_in_id = new_id()
             delay_func_id = new_id()
-            http_req_id = new_id()  # New HTTP request node
+            http_req_id = new_id()  # NEW: HTTP request node
 
             all_nodes.extend([
                 {
@@ -279,7 +289,7 @@ def deploy_simulation():
                     "name": f"{sub['name']} ← {topic}",
                     "topic": topic,
                     "qos": str(sub.get("qos", 1)),
-                    "datatype": "buffer",  # Changed to buffer to handle binary data
+                    "datatype": "buffer",  # receive binary payload
                     "broker": broker_config_id,
                     "x": 100,
                     "y": y,
@@ -290,52 +300,51 @@ def deploy_simulation():
                     "type": "function",
                     "z": tab_id,
                     "name": f"{sub['name']} DelayCalc",
-                    "func": "// ---- N-sample batch HTTP POST (no axios) ----\n"
-                    "// Configurable batch size from Flask:\n"
-                    f"const N = {BATCH_SIZE};\n"
-                    "\n"
-                    "// Per-subscriber buffer key\n"
-                    f"const bufKey = '{sub['name']}_latBuf';\n"
-                    "\n"
-                    "let buf = context.get(bufKey) || [];\n"
-                    "let count = context.get('count') || 0;\n"
-                    "\n"
-                    "try {\n"
-                    "  const b = Buffer.isBuffer(msg.payload) ? msg.payload : Buffer.from(msg.payload);\n"
-                    "  const ts_sent = Number(b.readBigInt64BE(0));\n"
-                    "  const now = Date.now();\n"
-                    "  const latency = now - ts_sent;\n"
-                    "\n"
-                    "  if (latency < 0 || latency > 60000) {\n"
-                    "    node.warn(`Invalid delay ${latency}ms`);\n"
-                    "    return null;\n"
-                    "  }\n"
-                    "\n"
-                    "  // Light logging\n"
-                    "  count += 1;\n"
-                    "  if (count % 10 === 0) node.log(`[${count}] Latency ${latency}ms for ${msg.topic}`);\n"
-                    "  context.set('count', count);\n"
-                    "\n"
-                    f"  // Buffer this sample\n"
-                    f"  buf.push({{ subscriber: '{sub['name']}', topic: msg.topic, delay: latency, ts: now }});\n"
-                    "  context.set(bufKey, buf);\n"
-                    "\n"
-                    "  // Emit HTTP request only when we have N samples\n"
-                    "  if (buf.length >= N) {\n"
-                    "    msg.url = 'http://host.docker.internal:5000/api/latency_batch';\n"
-                    "    msg.method = 'POST';\n"
-                    "    msg.headers = { 'Content-Type': 'application/json' };\n"
-                    "    msg.payload = buf;   // send the whole array\n"
-                    "    context.set(bufKey, []); // reset buffer AFTER staging the msg\n"
-                    "    return msg;\n"
-                    "  }\n"
-                    "\n"
-                    "  return null; // not enough samples yet\n"
-                    "\n"
-                    "} catch (e) {\n"
-                    "  node.error('Latency calc failed: ' + e.message);\n"
-                    "  return null;\n"
-                    "}",
+                    "func": f"""
+            // --- N-sample latency batching ---
+            const N = {BATCH_SIZE};
+            const bufKey = '{sub['name']}_latBuf';
+            let buf = context.get(bufKey) || [];
+            let count = context.get('count') || 0;
+
+            try {{
+                const b = Buffer.isBuffer(msg.payload) ? msg.payload : Buffer.from(msg.payload);
+                const ts_sent = Number(b.readBigInt64BE(0));
+                const now = Date.now();
+                const latency = now - ts_sent;
+
+                if (latency < 0 || latency > 60000) {{
+                    node.warn(`Invalid delay ${{latency}}ms`);
+                    return null;
+                }}
+
+                count++;
+                if (count % 50 === 0)
+                    node.log(`[${{count}}] {sub['name']} got delay ${{latency}}ms for ${{msg.topic}}`);
+                context.set('count', count);
+
+                buf.push({{
+                    subscriber: '{sub['name']}',
+                    topic: msg.topic,
+                    delay: latency,
+                    timestamp: now
+                }});
+                context.set(bufKey, buf);
+
+                if (buf.length >= N) {{
+                    msg.url = 'http://host.docker.internal:5000/api/latency_batch';
+                    msg.method = 'POST';
+                    msg.headers = {{ 'Content-Type': 'application/json' }};
+                    msg.payload = buf;
+                    context.set(bufKey, []);
+                    return msg;  // Forward to HTTP request node
+                }}
+                return null;
+            }} catch (e) {{
+                node.error('Latency calc failed: ' + e.message);
+                return null;
+            }}
+            """,
                     "outputs": 1,
                     "noerr": 0,
                     "initialize": "",
@@ -343,28 +352,27 @@ def deploy_simulation():
                     "libs": [],
                     "x": 300,
                     "y": y,
-                    "wires": [[http_req_id]]  # Wire to HTTP request node
+                    "wires": [[http_req_id]]
                 },
                 {
                     "id": http_req_id,
                     "type": "http request",
                     "z": tab_id,
                     "name": "Post to Flask",
-                    "method": "use",  # Will use method from msg
+                    "method": "use",
                     "ret": "txt",
                     "paytoqs": "ignore",
-                    "url": "",  # Will use URL from msg
+                    "url": "",  # taken from msg.url
                     "tls": "",
                     "persist": False,
                     "proxy": "",
                     "authType": "",
-                    "x": 500,
+                    "x": 520,
                     "y": y,
-                    "wires": [[]]  # No output needed
+                    "wires": [[]]
                 }
             ])
             y += 80
-
 
 
     # Deploy flows to Node-RED
@@ -394,7 +402,7 @@ def deploy_simulation():
 
 @app.route('/simulation/<action>', methods=['POST'])
 def control_simulation(action):
-    """Start or stop the simulation by toggling inject nodes"""
+    """Start or stop the simulation by enabling/disabling inject nodes"""
     if action not in ('start', 'stop'):
         return jsonify({"error": "Invalid action"}), 400
 
@@ -404,28 +412,76 @@ def control_simulation(action):
         flows_resp.raise_for_status()
         flows = flows_resp.json()
 
-        # Toggle inject nodes
+        # Find the simulation tab
+        sim_tab_id = None
         for node in flows:
-            if node.get("type") == "inject":
-                node["disabled"] = (action == "stop")
+            if node.get("type") == "tab" and node.get("label") == "Sim-AutoFlow":
+                sim_tab_id = node["id"]
+                break
+        
+        if not sim_tab_id:
+            return jsonify({"error": "Simulation tab not found"}), 404
+
+        # Toggle inject nodes in the simulation tab
+        inject_count = 0
+        for node in flows:
+            if node.get("type") == "inject" and node.get("z") == sim_tab_id:
+                if action == "stop":
+                    node["repeat"] = ""  # Clear repeat to stop injection
+                    node["once"] = False  # Prevent re-triggering on deploy
+                inject_count += 1
 
         # Redeploy with updated inject states
         resp = requests.post(
             f'{NODE_RED_URL}/flows',
-            headers={'Content-Type': 'application/json'},
+            headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'flows'},
             json=flows,
             timeout=10
         )
-        resp.raise_for_status()
-
+        
         if resp.status_code == 204:
-            return jsonify(ok=True, action=action)
+            print(f"[SimControl] {action.capitalize()}ped {inject_count} inject nodes")
+            return jsonify(ok=True, action=action, inject_nodes_affected=inject_count)
         else:
-            return jsonify(error=resp.text), 500
+            return jsonify(error=f"Failed to {action}: {resp.text}"), 500
 
     except requests.RequestException as e:
         return jsonify(error=f"Node-RED operation failed: {str(e)}"), 500
 
+
+def cleanup_simulation():
+    """Clean up simulation by removing the Sim-AutoFlow tab"""
+    try:
+        # Get all flows
+        flows_resp = requests.get(f'{NODE_RED_URL}/flows', timeout=10)
+        flows_resp.raise_for_status()
+        flows = flows_resp.json()
+        
+        # Find and remove simulation nodes
+        sim_tab_id = None
+        for node in flows:
+            if node.get("type") == "tab" and node.get("label") == "Sim-AutoFlow":
+                sim_tab_id = node["id"]
+                break
+        
+        if sim_tab_id:
+            # Remove all nodes associated with this tab
+            flows = [node for node in flows if node.get("z") != sim_tab_id and node.get("id") != sim_tab_id]
+            
+            # Redeploy
+            resp = requests.post(
+                f'{NODE_RED_URL}/flows',
+                headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'full'},
+                json=flows,
+                timeout=10
+            )
+            
+            if resp.status_code == 204:
+                print("[Cleanup] Simulation flows removed successfully")
+                return True
+    except Exception as e:
+        print(f"[Cleanup] Failed to clean up simulation: {e}")
+    return False
 # =============================================================================
 # MQTT DELAY COLLECTION
 # =============================================================================
@@ -521,7 +577,7 @@ def receive_latency():
 
 @app.route('/api/latency_batch', methods=['POST'])
 def receive_latency_batch():
-    """Receive a batch (array) of latency measurements"""
+    """Receive a batch (array) of latency measurements with full metadata"""
     try:
         batch = request.get_json(force=True)
         if not isinstance(batch, list):
@@ -529,15 +585,29 @@ def receive_latency_batch():
 
         now_ts = time.time()
         for rec in batch:
-            delay_data.append({
+            # Store complete record with all metadata
+            delay_record = {
                 'subscriber': rec.get('subscriber', 'unknown'),
                 'topic': rec.get('topic', 'unknown'),
                 'delay': float(rec.get('delay', 0)),
-                'timestamp': rec.get('ts') or rec.get('timestamp') or now_ts
-            })
+                'publisher_name': rec.get('publisher_name', 'unknown'),
+                'seq_id': rec.get('seq_id'),
+                'timestamp': rec.get('timestamp') or now_ts
+            }
+            delay_data.append(delay_record)
+            
+        # Log batch receipt
+        if len(batch) > 0:
+            print(f"[LatencyBatch] Received {len(batch)} samples. "
+                  f"First: pub={batch[0].get('publisher_name')}, "
+                  f"seq={batch[0].get('seq_id')}, "
+                  f"delay={batch[0].get('delay')}ms")
+        
         return jsonify(ok=True, received=len(batch))
     except Exception as e:
         print(f"[LatencyBatchReceiver] Error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify(error=str(e)), 400
 
 
@@ -692,8 +762,38 @@ def run_tests_in_background(job_id, args):
                 'resource_csv': resource_csv
             }
             
+                        # ---- Evaluation complete ----
             print(f"[TestRunner] Evaluation completed for {broker_name}")
-            requests.post('http://localhost:5000/simulation/stop')
+
+            # 1️⃣ Stop the simulation flows gracefully
+            print("[TestRunner] Stopping simulation flows...")
+            try:
+                stop_resp = requests.post('http://localhost:5000/simulation/stop', timeout=10)
+                if stop_resp.status_code == 200:
+                    print("[TestRunner] Simulation stopped successfully")
+                else:
+                    print(f"[TestRunner] Stop request returned {stop_resp.status_code}")
+            except Exception as e:
+                print(f"[TestRunner] Warning: failed to stop simulation cleanly: {e}")
+
+            # 2️⃣ Allow Node-RED to flush remaining HTTP batches
+            print("[TestRunner] Waiting 5 seconds for final latency posts...")
+            time.sleep(5)
+
+            # 3️⃣ Clean up Node-RED flows to free memory and CPU
+            print("[TestRunner] Cleaning up simulation flows...")
+            try:
+                success = cleanup_simulation()
+                if success:
+                    print("[TestRunner] Cleanup complete – Sim-AutoFlow tab removed.")
+                else:
+                    print("[TestRunner] Cleanup skipped or failed.")
+            except Exception as e:
+                print(f"[TestRunner] Cleanup error: {e}")
+
+            # ---- Done ----
+            print(f"[TestRunner] Job {job_id} finished and cleaned up.")
+
             
         except Exception as e:
             print(f"[TestRunner] Error: {e}")

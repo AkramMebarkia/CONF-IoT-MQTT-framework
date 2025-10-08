@@ -1,0 +1,314 @@
+{
+  "job_id": "539fd57fa4764dfe88fb3b817cc354fd",
+  "broker_name": "localhost",
+  "timestamp": "2025-10-08T10:09:00.542568",
+  "latency_count": 60200,
+  "latency_processed_count": 60200,
+  "latency_error_count": 0,
+  "latency_error_rate": 0.0,
+  "latency_unique_publisher_messages": 0,
+  "latency_avg_delay": 66.02,
+  "latency_min_delay": 1.0,
+  "latency_max_delay": 19213.0,
+  "latency_jitter": 495.45,
+  "latency_p50": 45.0,
+  "latency_p95": 135.0,
+  "latency_p99": 201.0,
+  "latency_publisher_breakdown": {},
+  "latency_stratified_stats": {
+    "by_publisher": {
+      "unknown": {
+        "count": 1000,
+        "avg": 63.25,
+        "min": 24.0,
+        "max": 106.0,
+        "p50": 63.5,
+        "p95": 95.05,
+        "p99": 98.03
+      }
+    },
+    "by_topic": {
+      "building/temps": {
+        "count": 1000,
+        "avg": 63.25,
+        "p50": 63.5,
+        "p95": 95.05
+      },
+      "alerts/fire": {
+        "count": 1000,
+        "avg": 201.78,
+        "p50": 5.0,
+        "p95": 51.05
+      },
+      "alerts/intrusion": {
+        "count": 1000,
+        "avg": 202.41,
+        "p50": 6.0,
+        "p95": 52.0
+      },
+      "factory/machines": {
+        "count": 1000,
+        "avg": 79.18,
+        "p50": 52.0,
+        "p95": 204.05
+      }
+    },
+    "by_subscriber": {
+      "Dashboards_8": {
+        "count": 1000,
+        "avg": 85.27
+      },
+      "AnalyticsWorkers_8": {
+        "count": 800,
+        "avg": 64.66
+      },
+      "Dashboards_7": {
+        "count": 1000,
+        "avg": 85.25
+      },
+      "Dashboards_18": {
+        "count": 1000,
+        "avg": 85.42
+      },
+      "AnalyticsWorkers_14": {
+        "count": 800,
+        "avg": 64.73
+      },
+      "AnalyticsWorkers_13": {
+        "count": 800,
+        "avg": 64.72
+      },
+      "Dashboards_2": {
+        "count": 1000,
+        "avg": 85.19
+      },
+      "Dashboards_6": {
+        "count": 1000,
+        "avg": 85.23
+      },
+      "Dashboards_3": {
+        "count": 1000,
+        "avg": 85.19
+      },
+      "Dashboards_1": {
+        "count": 1000,
+        "avg": 85.16
+      },
+      "Dashboards_5": {
+        "count": 1000,
+        "avg": 85.22
+      },
+      "AnalyticsWorkers_6": {
+        "count": 800,
+        "avg": 64.62
+      },
+      "AnalyticsWorkers_1": {
+        "count": 800,
+        "avg": 64.52
+      },
+      "Dashboards_10": {
+        "count": 1000,
+        "avg": 85.28
+      },
+      "AnalyticsWorkers_19": {
+        "count": 800,
+        "avg": 64.8
+      },
+      "AnalyticsWorkers_2": {
+        "count": 800,
+        "avg": 64.57
+      },
+      "AnalyticsWorkers_28": {
+        "count": 800,
+        "avg": 64.94
+      },
+      "AnalyticsWorkers_32": {
+        "count": 800,
+        "avg": 65.0
+      },
+      "Dashboards_20": {
+        "count": 1000,
+        "avg": 85.45
+      },
+      "AnalyticsWorkers_27": {
+        "count": 800,
+        "avg": 64.93
+      },
+      "Dashboards_19": {
+        "count": 1000,
+        "avg": 85.43
+      },
+      "AnalyticsWorkers_21": {
+        "count": 800,
+        "avg": 64.83
+      },
+      "Dashboards_4": {
+        "count": 1000,
+        "avg": 85.21
+      },
+      "AnalyticsWorkers_15": {
+        "count": 800,
+        "avg": 64.75
+      },
+      "AnalyticsWorkers_29": {
+        "count": 800,
+        "avg": 64.95
+      },
+      "AnalyticsWorkers_25": {
+        "count": 800,
+        "avg": 64.89
+      },
+      "Dashboards_16": {
+        "count": 1000,
+        "avg": 85.39
+      },
+      "AnalyticsWorkers_24": {
+        "count": 800,
+        "avg": 64.88
+      },
+      "Dashboards_14": {
+        "count": 1000,
+        "avg": 85.35
+      },
+      "AnalyticsWorkers_11": {
+        "count": 800,
+        "avg": 64.7
+      },
+      "Dashboards_13": {
+        "count": 1000,
+        "avg": 85.34
+      },
+      "Dashboards_12": {
+        "count": 1000,
+        "avg": 85.32
+      },
+      "Dashboards_17": {
+        "count": 1000,
+        "avg": 85.4
+      },
+      "Dashboards_15": {
+        "count": 1000,
+        "avg": 85.37
+      },
+      "Dashboards_11": {
+        "count": 1000,
+        "avg": 85.31
+      },
+      "AnalyticsWorkers_4": {
+        "count": 800,
+        "avg": 64.59
+      },
+      "AnalyticsWorkers_12": {
+        "count": 800,
+        "avg": 64.71
+      },
+      "AnalyticsWorkers_35": {
+        "count": 800,
+        "avg": 64.94
+      },
+      "AnalyticsWorkers_5": {
+        "count": 800,
+        "avg": 64.61
+      },
+      "AnalyticsWorkers_36": {
+        "count": 800,
+        "avg": 65.05
+      },
+      "Dashboards_9": {
+        "count": 1000,
+        "avg": 85.28
+      },
+      "AnalyticsWorkers_7": {
+        "count": 800,
+        "avg": 64.63
+      },
+      "AnalyticsWorkers_17": {
+        "count": 800,
+        "avg": 64.77
+      },
+      "AnalyticsWorkers_16": {
+        "count": 800,
+        "avg": 64.76
+      },
+      "AnalyticsWorkers_18": {
+        "count": 900,
+        "avg": 64.3
+      },
+      "AnalyticsWorkers_10": {
+        "count": 800,
+        "avg": 64.68
+      },
+      "AnalyticsWorkers_20": {
+        "count": 800,
+        "avg": 64.82
+      },
+      "AnalyticsWorkers_9": {
+        "count": 800,
+        "avg": 64.67
+      },
+      "AnalyticsWorkers_26": {
+        "count": 800,
+        "avg": 64.91
+      },
+      "AnalyticsWorkers_3": {
+        "count": 800,
+        "avg": 64.59
+      },
+      "AnalyticsWorkers_31": {
+        "count": 800,
+        "avg": 64.98
+      },
+      "AnalyticsWorkers_34": {
+        "count": 800,
+        "avg": 65.03
+      },
+      "AnalyticsWorkers_30": {
+        "count": 800,
+        "avg": 64.97
+      },
+      "AnalyticsWorkers_22": {
+        "count": 900,
+        "avg": 64.37
+      },
+      "AnalyticsWorkers_37": {
+        "count": 800,
+        "avg": 65.06
+      },
+      "AnalyticsWorkers_23": {
+        "count": 800,
+        "avg": 64.87
+      },
+      "AnalyticsWorkers_33": {
+        "count": 800,
+        "avg": 65.01
+      },
+      "AnalyticsWorkers_38": {
+        "count": 800,
+        "avg": 65.07
+      },
+      "AnalyticsWorkers_40": {
+        "count": 800,
+        "avg": 65.1
+      },
+      "AnalyticsWorkers_39": {
+        "count": 800,
+        "avg": 65.08
+      }
+    }
+  },
+  "throughput_delay_message_count": 6000,
+  "throughput_delay_throughput_mps": 351139.6,
+  "throughput_unique_publisher_messages": 0,
+  "throughput_publisher_throughput_mps": 0.0,
+  "throughput_duration": 0.02,
+  "throughput_subscriber_multiplication_factor": 0.0,
+  "throughput_start_time": 1759918081.0303779,
+  "throughput_end_time": 1759918140.5422068,
+  "availability_total_checks": 30,
+  "availability_failures": 0,
+  "availability_recoveries": 0,
+  "availability_downtime_events": 0,
+  "availability_avg_downtime_sec": 0.0,
+  "availability_mtbf_sec": 0.0,
+  "availability_mttr_sec": 0.0
+}

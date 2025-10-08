@@ -1,38 +1,33 @@
 import time
-from collections import deque
+from collections import deque, defaultdict
 from statistics import mean, stdev
 
 
-class LatencyTracker:
+class EnhancedLatencyTracker:
     """
-    EMQX-style Latency Tracker:
-    ---------------------------------
-    - No longer depends on MQTT messages.
-    - Receives precomputed delay measurements via Flask's /api/latency endpoint.
-    - Aggregates delays efficiently in memory.
-    - Computes mean, jitter, and percentile stats.
+    Enhanced latency tracker with stratified sampling and better statistics
     """
 
     def __init__(self):
-        self.delays = deque()  # Stores delay values (ms)
-        self.timestamps = deque()  # Optional, for tracking when data arrived
+        self.delays = deque()  # All delay values
+        self.timestamps = deque()  # Timestamps for each measurement
         self.processed_count = 0
         self.error_count = 0
 
-        # Per-publisher aggregation (optional if publisher info is included)
-        self.publisher_message_count = {}
+        # Track by different dimensions for stratified analysis
+        self.publisher_delays = defaultdict(deque)  # Delays per publisher
+        self.topic_delays = defaultdict(deque)  # Delays per topic
+        self.subscriber_delays = defaultdict(deque)  # Delays per subscriber
+        
+        # Track unique messages
+        self.unique_messages = set()  # (publisher_name, seq_id) tuples
+        self.publisher_message_count = defaultdict(int)
+        
         self.last_update = time.time()
 
     def handle_message(self, record: dict):
         """
-        Handle a single latency record from Flask's HTTP collector.
-        Expected format:
-            {
-                "subscriber": "Sub_1",
-                "topic": "sensors/temp",
-                "delay": 15.3,
-                "timestamp": 1738961290.12
-            }
+        Handle a single latency record with complete metadata
         """
         try:
             delay = record.get("delay")
@@ -42,25 +37,50 @@ class LatencyTracker:
 
             self.processed_count += 1
             delay = float(delay)
-            if delay < 0 or delay > 60000:  # Sanity check
+            
+            # Sanity check
+            if delay < 0 or delay > 60000:
                 self.error_count += 1
                 return
 
+            # Store in main collection
             self.delays.append(delay)
             self.timestamps.append(record.get("timestamp", time.time()))
 
-            # Optional: count per subscriber
+            # Extract metadata
+            publisher = record.get("publisher_name", "unknown")
+            seq_id = record.get("seq_id")
+            topic = record.get("topic", "unknown")
             subscriber = record.get("subscriber", "unknown")
-            self.publisher_message_count[subscriber] = (
-                self.publisher_message_count.get(subscriber, 0) + 1
-            )
 
-            # Periodic logging for visibility
+            # Track unique publisher messages
+            if publisher != "unknown" and seq_id is not None:
+                message_key = (publisher, seq_id)
+                if message_key not in self.unique_messages:
+                    self.unique_messages.add(message_key)
+                    self.publisher_message_count[publisher] += 1
+
+            # Store in stratified collections (limit per category to prevent memory issues)
+            MAX_PER_CATEGORY = 1000
+            
+            if len(self.publisher_delays[publisher]) < MAX_PER_CATEGORY:
+                self.publisher_delays[publisher].append(delay)
+            
+            if len(self.topic_delays[topic]) < MAX_PER_CATEGORY:
+                self.topic_delays[topic].append(delay)
+            
+            if len(self.subscriber_delays[subscriber]) < MAX_PER_CATEGORY:
+                self.subscriber_delays[subscriber].append(delay)
+
+            # Periodic logging
             if len(self.delays) % 500 == 0:
-                avg_delay = mean(list(self.delays)[-500:])
+                recent_avg = mean(list(self.delays)[-500:])
+                unique_pubs = len(set(k[0] for k in self.unique_messages))
                 print(
-                    f"[LatencyTracker] Processed {len(self.delays)} samples | "
-                    f"Recent avg={avg_delay:.2f} ms | Errors={self.error_count}"
+                    f"[LatencyTracker] Samples: {len(self.delays)} | "
+                    f"Unique msgs: {len(self.unique_messages)} | "
+                    f"Publishers: {unique_pubs} | "
+                    f"Recent avg: {recent_avg:.2f}ms"
                 )
 
         except Exception as e:
@@ -68,7 +88,7 @@ class LatencyTracker:
             print(f"[LatencyTracker] Error processing record: {e}")
 
     def _calculate_percentiles(self, delays_list):
-        """Calculate P50, P95, P99 percentiles"""
+        """Calculate P50, P95, P99 percentiles with proper interpolation"""
         if not delays_list or len(delays_list) < 2:
             return 0.0, 0.0, 0.0
 
@@ -87,10 +107,56 @@ class LatencyTracker:
             round(get_percentile(0.99), 2),
         )
 
+    def get_stratified_stats(self):
+        """Get statistics broken down by publisher, topic, and subscriber"""
+        stratified = {
+            "by_publisher": {},
+            "by_topic": {},
+            "by_subscriber": {}
+        }
+
+        # Publisher statistics
+        for pub, delays in self.publisher_delays.items():
+            if delays:
+                delays_list = list(delays)
+                p50, p95, p99 = self._calculate_percentiles(delays_list)
+                stratified["by_publisher"][pub] = {
+                    "count": len(delays_list),
+                    "avg": round(mean(delays_list), 2),
+                    "min": round(min(delays_list), 2),
+                    "max": round(max(delays_list), 2),
+                    "p50": p50,
+                    "p95": p95,
+                    "p99": p99
+                }
+
+        # Topic statistics
+        for topic, delays in self.topic_delays.items():
+            if delays:
+                delays_list = list(delays)
+                p50, p95, p99 = self._calculate_percentiles(delays_list)
+                stratified["by_topic"][topic] = {
+                    "count": len(delays_list),
+                    "avg": round(mean(delays_list), 2),
+                    "p50": p50,
+                    "p95": p95
+                }
+
+        # Subscriber statistics
+        for sub, delays in self.subscriber_delays.items():
+            if delays:
+                delays_list = list(delays)
+                stratified["by_subscriber"][sub] = {
+                    "count": len(delays_list),
+                    "avg": round(mean(delays_list), 2)
+                }
+
+        return stratified
+
     def get_stats(self):
-        """Compute and return aggregated latency statistics"""
+        """Compute and return comprehensive latency statistics"""
         total = len(self.delays)
-        print(f"[LatencyTracker] Generating latency stats for {total} samples...")
+        print(f"[LatencyTracker] Generating stats for {total} samples, {len(self.unique_messages)} unique messages...")
 
         if total == 0:
             return {
@@ -98,6 +164,7 @@ class LatencyTracker:
                 "processed_count": self.processed_count,
                 "error_count": self.error_count,
                 "error_rate": 0.0,
+                "unique_publisher_messages": 0,
                 "avg_delay": 0.0,
                 "min_delay": 0.0,
                 "max_delay": 0.0,
@@ -106,6 +173,7 @@ class LatencyTracker:
                 "p95": 0.0,
                 "p99": 0.0,
                 "publisher_breakdown": {},
+                "stratified_stats": {}
             }
 
         delays_list = list(self.delays)
@@ -120,6 +188,7 @@ class LatencyTracker:
                 "processed_count": self.processed_count,
                 "error_count": self.error_count,
                 "error_rate": round(error_rate, 2),
+                "unique_publisher_messages": len(self.unique_messages),
                 "avg_delay": round(avg_delay, 2),
                 "min_delay": round(min(delays_list), 2),
                 "max_delay": round(max(delays_list), 2),
@@ -128,21 +197,25 @@ class LatencyTracker:
                 "p95": p95,
                 "p99": p99,
                 "publisher_breakdown": dict(self.publisher_message_count),
+                "stratified_stats": self.get_stratified_stats()
             }
 
             print(
-                f"[LatencyTracker] Stats -> avg={stats['avg_delay']}ms | "
-                f"p50={p50} | p95={p95} | p99={p99} | jitter={stats['jitter']}"
+                f"[LatencyTracker] Final stats: {len(self.unique_messages)} unique messages | "
+                f"avg={stats['avg_delay']}ms | p50={p50} | p95={p95} | p99={p99}"
             )
             return stats
 
         except Exception as e:
             print(f"[LatencyTracker] Error computing stats: {e}")
+            import traceback
+            traceback.print_exc()
             return {
                 "count": total,
                 "processed_count": self.processed_count,
                 "error_count": self.error_count + 1,
                 "error_rate": 100.0,
+                "unique_publisher_messages": len(self.unique_messages),
                 "avg_delay": 0.0,
                 "min_delay": 0.0,
                 "max_delay": 0.0,
@@ -151,4 +224,5 @@ class LatencyTracker:
                 "p95": 0.0,
                 "p99": 0.0,
                 "publisher_breakdown": dict(self.publisher_message_count),
+                "stratified_stats": {}
             }
