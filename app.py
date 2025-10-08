@@ -26,7 +26,8 @@ from evaluation.controller import EvaluationController
 app = Flask(__name__, template_folder="frontend/templates", static_folder="frontend/static")
 
 # Global variables
-delay_data = deque(maxlen=2000)
+delay_data = deque(maxlen=20000)
+delay_collector_client = None
 job_status = {}
 
 # Configuration constants
@@ -212,14 +213,14 @@ def deploy_simulation():
 
         global.get('seq')[pubName]++;
 
-        // Create single message with current timestamp
-        var payload = {{
-            ts_sent: Date.now(),
-            seq_id: global.get('seq')[pubName],
-            name: pubName,
-            topic: topic,
-            data: 'X'.repeat(payloadSize)
-        }};
+        // Create 8-byte timestamp header + binary payload
+        var buffer = Buffer.alloc(8 + payloadSize);
+        var now = BigInt(Date.now());
+        buffer.writeBigInt64BE(now, 0);
+        buffer.fill('X', 8);  // fill payload section
+
+        var payload = buffer; // raw binary
+
 
         // Log every 10th message
         if (global.get('seq')[pubName] % 10 === 0) {{
@@ -260,7 +261,6 @@ def deploy_simulation():
         for topic in sub["topics"]:
             mqtt_in_id = new_id()
             delay_func_id = new_id()
-            mqtt_out_id = new_id()
 
             all_nodes.extend([
                 {
@@ -282,108 +282,51 @@ def deploy_simulation():
                     "z": tab_id,
                     "name": f"{sub['name']} DelayCalc",
                     "func": (
+                        "// Measure latency directly on subscriber and post to Flask collector\n"
                         "try {\n"
-                        "  var payload = msg.payload;\n"
-                        "  \n"
-                        "  // Handle string payloads\n"
-                        "  if (typeof payload === 'string') {\n"
-                        "    try {\n"
-                        "      payload = JSON.parse(payload);\n"
-                        "    } catch (e) {\n"
-                        "      node.warn('Failed to parse JSON payload: ' + e.message);\n"
-                        "      return null;\n"
-                        "    }\n"
-                        "  }\n"
-                        "  \n"
-                        "  // Validate payload\n"
-                        "  if (!payload || typeof payload !== 'object') {\n"
-                        "    node.warn('Invalid payload type: ' + typeof payload);\n"
+                        "  const buf = Buffer.from(msg.payload);\n"
+                        "  const ts_sent = Number(buf.readBigInt64BE(0));\n"
+                        "  const now = Date.now();\n"
+                        "  const latency = now - ts_sent;\n"
+                        "\n"
+                        "  if (latency < 0 || latency > 60000) {\n"
+                        "    node.warn(`Invalid delay ${latency}ms`);\n"
                         "    return null;\n"
                         "  }\n"
-                        "  \n"
-                        "  // Check required fields\n"
-                        "  if (!payload.ts_sent) {\n"
-                        "    node.warn('Missing ts_sent. Available fields: ' + Object.keys(payload).join(', '));\n"
-                        "    return null;\n"
-                        "  }\n"
-                        "  \n"
-                        "  var publisherName = payload.name;  // This is the PUBLISHER name from original message\n"
-                        "  if (!publisherName) {\n"
-                        "    node.warn('Missing publisher name in original message');\n"
-                        "    publisherName = 'unknown_pub';\n"
-                        "  }\n"
-                        "  \n"
-                        "  // Calculate delay\n"
-                        "  var now = Date.now();\n"
-                        "  var delay = now - payload.ts_sent;\n"
-                        "  \n"
-                        "  // Validate delay\n"
-                        "  if (delay < 0) {\n"
-                        "    // delay = Math.abs(delay);\n"
-                        "    node.warn('Clock skew detected: ' + (0 - delay) + 'ms- ignoring massage');\n"
-                        "    return null;\n"
-                        "  } else if (delay > 60000) { \n"
-                        "    node.warn('High delay detected: ' + delay + 'ms - possible stale message');\n"
-                        "    return null;\n"
-                        "  }\n"
-                        "  \n"
-                        "  // Create stats message with correct field names\n"
-                        "  var statsMsg = {\n"
-                        "    topic: 'sim/stats/delay',\n"
-                        "    payload: {\n"
-                        "      // Subscriber info\n"
-                        f"      subscriber_name: '{sub['name']}',\n"
-                        f"      subscriber_topic: '{topic}',\n"
-                        "      \n"
-                        "      // Publisher info - CRITICAL: use consistent field name\n"
-                        "      publisher_name: publisherName,  // This was the issue!\n"
-                        "      original_topic: payload.topic || msg.topic,\n"
-                        "      \n"
-                        "      // Timing info\n"
-                        "      delay: delay,\n"
-                        "      seq_id: payload.seq_id || 0,\n"
-                        "      ts_sent: payload.ts_sent,\n"
-                        "      ts_recv: now,\n"
-                        "      \n"
-                        "      // Debug info\n"
-                        "      message_source: 'nodered_subscriber'\n"
-                        "    }\n"
-                        "  };\n"
-                        "  \n"
-                        "  // Debug logging\n"
-                        f"  node.log('Delay calc: ' + delay + 'ms | Pub: ' + publisherName + ' | Sub: {sub['name']} | Seq: ' + (payload.seq_id || 'none'));\n"
-                        "  \n"
-                        "  return statsMsg;\n"
-                        "  \n"
-                        "} catch (error) {\n"
-                        "  node.error('Delay calculation error: ' + error.message + ' | Stack: ' + error.stack);\n"
+                        "\n"
+                        "  node.log(`Latency ${latency}ms for ${msg.topic}`);\n"
+                        "\n"
+                        "  // Post latency to Flask via HTTP\n"
+                        "  const axios = require('axios');\n"
+                        "  axios.post('http://localhost:5000/api/latency', {\n"
+                        "    subscriber: node.name,\n"
+                        "    topic: msg.topic,\n"
+                        "    delay: latency,\n"
+                        "    ts: now\n"
+                        "  }).then(res => {\n"
+                        "    //node.log(`POST ok ${latency}ms`);\n"
+                        "  }).catch(err => {\n"
+                        "    node.error('HTTP post failed: ' + err.message);\n"
+                        "  });\n"
+                        "\n"
+                        "  return null;\n"
+                        "} catch (e) {\n"
+                        "  node.error('Latency calc failed: ' + e.message);\n"
                         "  return null;\n"
                         "}"
                     ),
-                    "outputs": 1,
+                    "outputs": 0,
                     "noerr": 0,
                     "initialize": "",
                     "finalize": "",
                     "libs": [],
                     "x": 300,
-                    "y": y,
-                    "wires": [[mqtt_out_id]]
-                },
-                {
-                    "id": mqtt_out_id,
-                    "type": "mqtt out",
-                    "z": tab_id,
-                    "name": f"Stats → sim/stats/delay",
-                    "topic": "sim/stats/delay",
-                    "qos": "1",
-                    "retain": "false",
-                    "broker": broker_config_id,
-                    "x": 530,
-                    "y": y,
-                    "wires": []
+                    "y": y
                 }
             ])
             y += 80
+
+
 
     # Deploy flows to Node-RED
     try:
@@ -448,76 +391,95 @@ def control_simulation(action):
 # MQTT DELAY COLLECTION
 # =============================================================================
 
-def start_delay_collector(broker_host, broker_port, delay_deque):
-    """Start MQTT client to collect delay measurements"""
-    # Use the new callback API version
-    client = mqtt.Client(
-        callback_api_version=CallbackAPIVersion.VERSION2,
-        client_id=f"flask_delay_collector_{uuid.uuid4().hex[:8]}",
-        protocol=mqtt.MQTTv311
-    )
+# def start_delay_collector(broker_host, broker_port, delay_deque):
+#     """Start MQTT client to collect delay measurements"""
+#     # Use the new callback API version
+#     client = mqtt.Client(
+#         callback_api_version=CallbackAPIVersion.VERSION2,
+#         client_id=f"flask_delay_collector_{uuid.uuid4().hex[:8]}",
+#         protocol=mqtt.MQTTv311
+#     )
     
-    # Store connection state
-    client.connected = False
-    client.reconnect_delay = 5
+#     # Store connection state
+#     client.connected = False
+#     client.reconnect_delay = 5
     
-    def on_connect(client, userdata, flags, reason_code, properties):
-            if reason_code == 0:
-                print(f"Delay collector connected to {broker_host}:{broker_port}")
-                client.connected = True
-                result = client.subscribe("sim/stats/delay", qos=1)
-                print("ubscribed to sim/stats/delay")
-            else:
-                print(f"Delay collector connection failed: {reason_code}")
-                client.connected = False
+#     def on_connect(client, userdata, flags, reason_code, properties):
+#             if reason_code == 0:
+#                 print(f"Delay collector connected to {broker_host}:{broker_port}")
+#                 client.connected = True
+#                 result = client.subscribe("sim/stats/delay", qos=1)
+#                 print("ubscribed to sim/stats/delay")
+#             else:
+#                 print(f"Delay collector connection failed: {reason_code}")
+#                 client.connected = False
         
-    def on_message(client, userdata, msg):
-        try:
-            payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
-            payload = json.loads(payload_str)
-            payload['timestamp'] = time.time()
-            delay_deque.append(payload)
-            publisher_name = payload.get('publisher_name', 'unknown')
-            print(f"Delay data received: {payload.get('delay', 'N/A')}ms from {publisher_name}")
-        except Exception as e:
-            print(f"Delay parser error: {e}, payload: {msg.payload}")
+#     def on_message(client, userdata, msg):
+#         try:
+#             payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
+#             payload = json.loads(payload_str)
+#             payload['timestamp'] = time.time()
+#             delay_deque.append(payload)
+#             publisher_name = payload.get('publisher_name', 'unknown')
+#             print(f"Delay data received: {payload.get('delay', 'N/A')}ms from {publisher_name}")
+#         except Exception as e:
+#             print(f"Delay parser error: {e}, payload: {msg.payload}")
         
-    def on_disconnect(client, userdata, reason_code, properties):
-            print(f"[DelayCollector] Disconnected from broker (rc={reason_code})")
-            client.connected = False
-            if reason_code != 0:
-                # Attempt reconnection after delay
-                print(f"⏳ [DelayCollector] Will attempt reconnection in {client.reconnect_delay} seconds...")
-                time.sleep(client.reconnect_delay)
-                try:
-                    client.reconnect()
-                except Exception as e:
-                    print(f"[DelayCollector] Reconnection failed: {e}")
+#     def on_disconnect(client, userdata, reason_code, properties):
+#             print(f"[DelayCollector] Disconnected from broker (rc={reason_code})")
+#             client.connected = False
+#             if reason_code != 0:
+#                 # Attempt reconnection after delay
+#                 print(f"⏳ [DelayCollector] Will attempt reconnection in {client.reconnect_delay} seconds...")
+#                 time.sleep(client.reconnect_delay)
+#                 try:
+#                     client.reconnect()
+#                 except Exception as e:
+#                     print(f"[DelayCollector] Reconnection failed: {e}")
         
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.on_disconnect = on_disconnect
+#     client.on_connect = on_connect
+#     client.on_message = on_message
+#     client.on_disconnect = on_disconnect
         
-    # Enable automatic reconnection
-    client.reconnect_delay_set(min_delay=1, max_delay=120)
+#     # Enable automatic reconnection
+#     client.reconnect_delay_set(min_delay=1, max_delay=120)
         
-    try:
-            print(f"Connecting delay collector to {broker_host}:{broker_port}")
-            client.connect(broker_host, broker_port, 60)
-            client.loop_start()
-            print(f"Delay collector loop started for {broker_host}:{broker_port}")
-            return client
-    except Exception as e:
-            print(f"Failed to connect delay collector: {e}")
-            return None
+#     try:
+#             print(f"Connecting delay collector to {broker_host}:{broker_port}")
+#             client.connect(broker_host, broker_port, 60)
+#             client.loop_start()
+#             print(f"Delay collector loop started for {broker_host}:{broker_port}")
+#             return client
+#     except Exception as e:
+#             print(f"Failed to connect delay collector: {e}")
+#             return None
 
-# Global delay collector client
-delay_collector_client = None
+# # Global delay collector client
+# delay_collector_client = None
 
 @app.route('/api/metrics')
 def get_delay_metrics():
         """Get latest delay metrics"""
         return jsonify(list(delay_data)[-100:])
+
+
+@app.route('/api/latency', methods=['POST'])
+def receive_latency():
+    """Receive latency measurements from subscribers (HTTP POST)"""
+    try:
+        data = request.get_json()
+        delay = float(data.get('delay', 0))
+        delay_data.append({
+            'subscriber': data.get('subscriber', 'unknown'),
+            'topic': data.get('topic', 'unknown'),
+            'delay': delay,
+            'timestamp': data.get('ts', time.time())
+        })
+        return jsonify(ok=True)
+    except Exception as e:
+        print(f"[LatencyReceiver] Error: {e}")
+        return jsonify(error=str(e)), 400
+
 
 # =============================================================================
 # DOCKER MONITORING FUNCTIONS

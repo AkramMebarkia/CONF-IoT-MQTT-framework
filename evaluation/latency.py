@@ -1,140 +1,100 @@
 import time
-import json
 from collections import deque
 from statistics import mean, stdev
 
+
 class LatencyTracker:
+    """
+    EMQX-style Latency Tracker:
+    ---------------------------------
+    - No longer depends on MQTT messages.
+    - Receives precomputed delay measurements via Flask's /api/latency endpoint.
+    - Aggregates delays efficiently in memory.
+    - Computes mean, jitter, and percentile stats.
+    """
+
     def __init__(self):
-        # REMOVE maxlen to allow unlimited messages during evaluation, please refer to the last git commit to see previous version with limited maxlen.
-        self.delays = deque()  # No maxlen limit
-        self.timestamps = deque()  # No maxlen limit
+        self.delays = deque()  # Stores delay values (ms)
+        self.timestamps = deque()  # Optional, for tracking when data arrived
         self.processed_count = 0
         self.error_count = 0
-        
-        # Track unique messages to avoid double counting
-        self.unique_messages = set()  # Store (publisher_name, seq_id) tuples
-        self.publisher_message_count = {}  # Track actual publisher messages
-        
-    def handle_message(self, msg):
+
+        # Per-publisher aggregation (optional if publisher info is included)
+        self.publisher_message_count = {}
+        self.last_update = time.time()
+
+    def handle_message(self, record: dict):
+        """
+        Handle a single latency record from Flask's HTTP collector.
+        Expected format:
+            {
+                "subscriber": "Sub_1",
+                "topic": "sensors/temp",
+                "delay": 15.3,
+                "timestamp": 1738961290.12
+            }
+        """
         try:
-            self.processed_count += 1
-            
-            # Parse payload
-            if isinstance(msg.payload, bytes):
-                payload_str = msg.payload.decode('utf-8')
-            else:
-                payload_str = str(msg.payload)
-            
-            try:
-                payload = json.loads(payload_str)
-            except json.JSONDecodeError as e:
-                print(f"JSON decode error: {e}")
-                self.error_count += 1
-                return
-            
-            if not isinstance(payload, dict):
-                print(f"Payload is not dict: {type(payload)}")
-                self.error_count += 1
-                return
-            
-            # ✅ USE THE DELAY ALREADY CALCULATED BY NODE-RED SUBSCRIBER
-            delay = payload.get('delay')  # This is the CORRECT value!
-            publisher_name = payload.get('publisher_name')
-            seq_id = payload.get('seq_id')
-            
+            delay = record.get("delay")
             if delay is None:
-                print(f"Missing delay in payload keys: {list(payload.keys())}")
                 self.error_count += 1
                 return
-            
-            if not publisher_name:
-                original_topic = payload.get('original_topic', '')
-                if original_topic:
-                    publisher_name = f"publisher_{original_topic.replace('/', '_')}"
-            
-            # Track unique publisher messages
-            if publisher_name and seq_id is not None:
-                message_key = (publisher_name, seq_id)
-                if message_key not in self.unique_messages:
-                    self.unique_messages.add(message_key)
-                    if publisher_name not in self.publisher_message_count:
-                        self.publisher_message_count[publisher_name] = 0
-                    self.publisher_message_count[publisher_name] += 1
-                    
-                    if len(self.unique_messages) % 100 == 0:
-                        print(f"✓ Unique message #{len(self.unique_messages)}: {publisher_name} seq={seq_id}")
-            
-            try:
-                delay = float(delay)
-                
-                # Sanity check (but don't need to worry about negative delays anymore!)
-                if delay < 0:
-                    print(f"WARNING: Negative delay received: {delay}ms (Node-RED clock issue)")
-                    self.error_count += 1
-                    return
-                
-                if delay > 60000:  # More than 60 seconds
-                    print(f"Suspiciously high delay: {delay}ms from {publisher_name}")
-                    # Still record it, might be legitimate under load
-                
-                self.delays.append(delay)
-                self.timestamps.append(time.time() * 1000)  # Just for tracking when we received it
-                
-                # Log progress every 500 messages
-                if len(self.delays) % 500 == 0:
-                    unique_count = len(self.unique_messages)
-                    avg_delay = mean(list(self.delays)[-500:])
-                    print(f"Progress: {len(self.delays)} measurements, {unique_count} unique msgs, "
-                        f"Recent avg: {avg_delay:.2f}ms")
-                    
-            except (ValueError, TypeError) as e:
-                print(f"Delay conversion error: {e}")
+
+            self.processed_count += 1
+            delay = float(delay)
+            if delay < 0 or delay > 60000:  # Sanity check
                 self.error_count += 1
                 return
+
+            self.delays.append(delay)
+            self.timestamps.append(record.get("timestamp", time.time()))
+
+            # Optional: count per subscriber
+            subscriber = record.get("subscriber", "unknown")
+            self.publisher_message_count[subscriber] = (
+                self.publisher_message_count.get(subscriber, 0) + 1
+            )
+
+            # Periodic logging for visibility
+            if len(self.delays) % 500 == 0:
+                avg_delay = mean(list(self.delays)[-500:])
+                print(
+                    f"[LatencyTracker] Processed {len(self.delays)} samples | "
+                    f"Recent avg={avg_delay:.2f} ms | Errors={self.error_count}"
+                )
 
         except Exception as e:
-            print(f"Unexpected processing error: {e}")
-            import traceback
-            traceback.print_exc()
             self.error_count += 1
+            print(f"[LatencyTracker] Error processing record: {e}")
 
     def _calculate_percentiles(self, delays_list):
-        """Calculate percentiles from delay list"""
+        """Calculate P50, P95, P99 percentiles"""
         if not delays_list or len(delays_list) < 2:
             return 0.0, 0.0, 0.0
-            
+
         sorted_delays = sorted(delays_list)
         n = len(sorted_delays)
-        
-        def get_percentile(sorted_list, percentile):
-            k = (len(sorted_list) - 1) * percentile
+
+        def get_percentile(p):
+            k = (n - 1) * p
             f = int(k)
-            c = f + 1
-            if c >= len(sorted_list):
-                return sorted_list[f]
-            d0 = sorted_list[f] * (c - k)
-            d1 = sorted_list[c] * (k - f)
-            return d0 + d1
-        
-        p50 = get_percentile(sorted_delays, 0.50)
-        p95 = get_percentile(sorted_delays, 0.95)
-        p99 = get_percentile(sorted_delays, 0.99)
-        
-        return round(p50, 2), round(p95, 2), round(p99, 2)
+            c = min(f + 1, n - 1)
+            return sorted_delays[f] + (sorted_delays[c] - sorted_delays[f]) * (k - f)
+
+        return (
+            round(get_percentile(0.50), 2),
+            round(get_percentile(0.95), 2),
+            round(get_percentile(0.99), 2),
+        )
 
     def get_stats(self):
-        print(f"Generating stats: {len(self.delays)} delays, {self.error_count} errors")
-        print(f"Unique publisher messages: {len(self.unique_messages)}")
-        
-        if self.publisher_message_count:
-            print(f"Publisher breakdown (top 5):")
-            for pub, count in sorted(self.publisher_message_count.items(), key=lambda x: x[1], reverse=True)[:5]:
-                print(f"   - {pub}: {count} messages")
-        
-        if not self.delays:
+        """Compute and return aggregated latency statistics"""
+        total = len(self.delays)
+        print(f"[LatencyTracker] Generating latency stats for {total} samples...")
+
+        if total == 0:
             return {
                 "count": 0,
-                "unique_publisher_messages": 0,
                 "processed_count": self.processed_count,
                 "error_count": self.error_count,
                 "error_rate": 0.0,
@@ -145,51 +105,41 @@ class LatencyTracker:
                 "p50": 0.0,
                 "p95": 0.0,
                 "p99": 0.0,
-                "publisher_breakdown": {}
+                "publisher_breakdown": {},
             }
 
         delays_list = list(self.delays)
-        
         try:
-            # Calculate percentiles
             p50, p95, p99 = self._calculate_percentiles(delays_list)
-            
-            # Calculate error rate properly
+            avg_delay = mean(delays_list)
+            jitter = stdev(delays_list) if len(delays_list) > 1 else 0.0
             error_rate = (self.error_count / max(self.processed_count, 1)) * 100
-            
+
             stats = {
-                "count": len(delays_list),  # Total delay measurements received
-                "unique_publisher_messages": len(self.unique_messages),  # Actual unique messages
+                "count": total,
                 "processed_count": self.processed_count,
                 "error_count": self.error_count,
                 "error_rate": round(error_rate, 2),
-                "avg_delay": round(mean(delays_list), 2),
+                "avg_delay": round(avg_delay, 2),
                 "min_delay": round(min(delays_list), 2),
                 "max_delay": round(max(delays_list), 2),
-                "jitter": round(stdev(delays_list), 2) if len(delays_list) >= 2 else 0.0,
+                "jitter": round(jitter, 2),
                 "p50": p50,
                 "p95": p95,
                 "p99": p99,
-                "publisher_breakdown": dict(self.publisher_message_count)
+                "publisher_breakdown": dict(self.publisher_message_count),
             }
-            
-            print(f"   Stats generated successfully:")
-            print(f"   Total delay measurements: {stats['count']}")
-            print(f"   Unique publisher messages: {stats['unique_publisher_messages']}")
-            print(f"   Avg delay: {stats['avg_delay']}ms")
-            print(f"   P50/P95/P99: {p50}/{p95}/{p99}ms")
-            print(f"   Error rate: {stats['error_rate']}%")
-            
+
+            print(
+                f"[LatencyTracker] Stats -> avg={stats['avg_delay']}ms | "
+                f"p50={p50} | p95={p95} | p99={p99} | jitter={stats['jitter']}"
+            )
             return stats
-            
+
         except Exception as e:
-            print(f"Error calculating stats: {e}")
-            import traceback
-            traceback.print_exc()
-            
+            print(f"[LatencyTracker] Error computing stats: {e}")
             return {
-                "count": len(delays_list),
-                "unique_publisher_messages": len(self.unique_messages),
+                "count": total,
                 "processed_count": self.processed_count,
                 "error_count": self.error_count + 1,
                 "error_rate": 100.0,
@@ -200,5 +150,5 @@ class LatencyTracker:
                 "p50": 0.0,
                 "p95": 0.0,
                 "p99": 0.0,
-                "publisher_breakdown": dict(self.publisher_message_count)
+                "publisher_breakdown": dict(self.publisher_message_count),
             }

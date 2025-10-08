@@ -43,8 +43,8 @@ class EvaluationController:
             self.connected = True
             self.connection_error = None
             # Subscribe with QoS 1 for reliability
-            result, mid = client.subscribe("sim/stats/delay", qos=1)
-            print(f"Subscribe request sent (mid={mid})")
+            # result, mid = client.subscribe("sim/stats/delay", qos=1)
+            # print(f"Subscribe request sent (mid={mid})")
         else:
             error_msg = f"Connection failed with code {rc}"
             print(f"Controller connection failed: {error_msg}")
@@ -65,24 +65,24 @@ class EvaluationController:
             self.message_count += 1
             print(f"Message #{self.message_count} received on {msg.topic}")
             
-            if msg.topic == "sim/stats/delay":
-                # Process the message
-                self.latency_tracker.handle_message(msg)
+            # if msg.topic == "sim/stats/delay":
+            #     # Process the message
+            #     self.latency_tracker.handle_message(msg)
                 
-                # Extract payload and pass to throughput tracker
-                try:
-                    payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
-                    payload = json.loads(payload_str)
+            #     # Extract payload and pass to throughput tracker
+            #     try:
+            #         payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
+            #         payload = json.loads(payload_str)
                     
-                    # Use new method that tracks unique publisher messages
-                    self.throughput_tracker.record_delay_message(payload)
+            #         # Use new method that tracks unique publisher messages
+            #         self.throughput_tracker.record_delay_message(payload)
                     
-                    # Debug: Show what we received
-                    print(f"   Delay: {payload.get('delay', 'N/A')}ms, From: {payload.get('publisher_name', 'unknown')}, Topic: {payload.get('subscriber_topic', 'unknown')}")
-                except Exception as e:
-                    print(f"   Payload parse error: {e}")
-                    # Fallback to old method
-                    self.throughput_tracker.record_message()
+            #         # Debug: Show what we received
+            #         print(f"   Delay: {payload.get('delay', 'N/A')}ms, From: {payload.get('publisher_name', 'unknown')}, Topic: {payload.get('subscriber_topic', 'unknown')}")
+            #     except Exception as e:
+            #         print(f"   Payload parse error: {e}")
+            #         # Fallback to old method
+            #         self.throughput_tracker.record_message()
                     
         except Exception as e:
             print(f"Message handling error: {e}")
@@ -149,14 +149,15 @@ class EvaluationController:
             elapsed = int(current_time - start_time)
             
             # Report progress every 5 seconds
+            # Report progress every 5 seconds
             if current_time - last_report_time >= 5:
                 rate = (current_count - last_count) / (current_time - last_report_time)
                 remaining = self.duration - elapsed
-                
-                # Also report unique publisher messages
-                unique_msgs = len(self.latency_tracker.unique_messages)
-                print(f"Progress: {elapsed}s/{self.duration}s | Delay msgs: {current_count} | Unique publisher msgs: {unique_msgs} | Rate: {rate:.1f} msg/s | Remaining: {remaining}s")
-                
+
+                total_delays = len(self.latency_tracker.delays)
+                print(f"Progress: {elapsed}s/{self.duration}s | "
+                    f"Delay samples: {total_delays} | "
+                    f"Rate: {rate:.1f} msg/s | Remaining: {remaining}s")
                 # Warn if no messages after 10 seconds
                 if current_count == 0 and elapsed >= 10:
                     no_message_warnings += 1
@@ -174,7 +175,8 @@ class EvaluationController:
             time.sleep(1)
 
         print(f"Data collection finished. Total delay messages: {self.message_count}")
-        print(f"Unique publisher messages tracked: {len(self.latency_tracker.unique_messages)}")
+        print(f"Total latency samples collected: {len(self.latency_tracker.delays)}")
+
 
         # Shutdown MQTT and monitoring
         self.client.loop_stop()
