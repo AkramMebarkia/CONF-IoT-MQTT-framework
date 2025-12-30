@@ -1,6 +1,9 @@
+import logging
 import time
 from collections import deque, defaultdict
 from statistics import mean, stdev
+
+logger = logging.getLogger(__name__)
 
 
 class EnhancedLatencyTracker:
@@ -72,20 +75,15 @@ class EnhancedLatencyTracker:
             if len(self.subscriber_delays[subscriber]) < MAX_PER_CATEGORY:
                 self.subscriber_delays[subscriber].append(delay)
 
-            # Periodic logging
             if len(self.delays) % 500 == 0:
                 recent_avg = mean(list(self.delays)[-500:])
                 unique_pubs = len(set(k[0] for k in self.unique_messages))
-                print(
-                    f"[LatencyTracker] Samples: {len(self.delays)} | "
-                    f"Unique msgs: {len(self.unique_messages)} | "
-                    f"Publishers: {unique_pubs} | "
-                    f"Recent avg: {recent_avg:.2f}ms"
-                )
+                logger.debug("Samples: %d | Unique msgs: %d | Publishers: %d | Recent avg: %.2fms",
+                            len(self.delays), len(self.unique_messages), unique_pubs, recent_avg)
 
         except Exception as e:
             self.error_count += 1
-            print(f"[LatencyTracker] Error processing record: {e}")
+            logger.error("Error processing latency record: %s", e)
 
     def _calculate_percentiles(self, delays_list):
         """Calculate P50, P95, P99 percentiles with proper interpolation"""

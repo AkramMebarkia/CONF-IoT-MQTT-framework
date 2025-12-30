@@ -1,13 +1,17 @@
+import logging
 import threading
 import time
 import uuid
-import json
+
 import paho.mqtt.client as mqtt
+from paho.mqtt.enums import CallbackAPIVersion
 
 from evaluation.latency import EnhancedLatencyTracker
 from evaluation.throughput import FixedThroughputTracker
 from evaluation.availability import AvailabilityMonitor
 from evaluation.stats import StatsAggregator
+
+logger = logging.getLogger(__name__)
 
 
 class EvaluationController:
@@ -22,80 +26,52 @@ class EvaluationController:
         self.connection_error = None
         self.delay_queue = delay_queue
 
-        # Trackers
         self.latency_tracker = EnhancedLatencyTracker()
         self.throughput_tracker = FixedThroughputTracker()
         self.availability_monitor = AvailabilityMonitor()
 
-        # MQTT - Create unique client ID
         client_id = f"eval_controller_{self.job_id[:8]}"
-        self.client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
+        self.client = mqtt.Client(
+            callback_api_version=CallbackAPIVersion.VERSION2,
+            client_id=client_id,
+            protocol=mqtt.MQTTv311
+        )
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
         self.client.on_subscribe = self.on_subscribe
 
-        # Aggregator
         self.aggregator = StatsAggregator(self.job_id, self.broker_host, output_dir=output_dir)
 
-    def on_connect(self, client, userdata, flags, rc):
-        if rc == 0:
-            print(f"Connected to {self.broker_host}:{self.broker_port}")
+    def on_connect(self, client, userdata, flags, reason_code, properties=None):
+        if reason_code == 0:
+            logger.info("Connected to %s:%d", self.broker_host, self.broker_port)
             self.connected = True
             self.connection_error = None
-            # Subscribe with QoS 1 for reliability
-            # result, mid = client.subscribe("sim/stats/delay", qos=1)
-            # print(f"Subscribe request sent (mid={mid})")
         else:
-            error_msg = f"Connection failed with code {rc}"
-            print(f"Controller connection failed: {error_msg}")
+            error_msg = f"Connection failed with code {reason_code}"
+            logger.error("Controller connection failed: %s", error_msg)
             self.connected = False
             self.connection_error = error_msg
 
-    def on_subscribe(self, client, userdata, mid, granted_qos):
-        print(f"Successfully subscribed to sim/stats/delay (mid={mid}, qos={granted_qos})")
+    def on_subscribe(self, client, userdata, mid, reason_codes, properties=None):
+        logger.info("Successfully subscribed (mid=%d)", mid)
 
-    def on_disconnect(self, client, userdata, rc):
-        print(f"Controller disconnected (code: {rc})")
+    def on_disconnect(self, client, userdata, flags, reason_code, properties=None):
+        logger.info("Controller disconnected (code: %s)", reason_code)
         self.connected = False
-        if rc != 0:
-            print(f"Unexpected disconnection!")
 
     def on_message(self, client, userdata, msg):
         try:
             self.message_count += 1
-            print(f"Message #{self.message_count} received on {msg.topic}")
-            
-            # if msg.topic == "sim/stats/delay":
-            #     # Process the message
-            #     self.latency_tracker.handle_message(msg)
-                
-            #     # Extract payload and pass to throughput tracker
-            #     try:
-            #         payload_str = msg.payload.decode() if isinstance(msg.payload, bytes) else str(msg.payload)
-            #         payload = json.loads(payload_str)
-                    
-            #         # Use new method that tracks unique publisher messages
-            #         self.throughput_tracker.record_delay_message(payload)
-                    
-            #         # Debug: Show what we received
-            #         print(f"   Delay: {payload.get('delay', 'N/A')}ms, From: {payload.get('publisher_name', 'unknown')}, Topic: {payload.get('subscriber_topic', 'unknown')}")
-            #     except Exception as e:
-            #         print(f"   Payload parse error: {e}")
-            #         # Fallback to old method
-            #         self.throughput_tracker.record_message()
-                    
+            logger.debug("Message #%d received on %s", self.message_count, msg.topic)
         except Exception as e:
-            print(f"Message handling error: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error("Message handling error: %s", e)
 
     def run(self):
-        print(f"Starting evaluation for {self.duration}s")
-        print(f"   Broker: {self.broker_host}:{self.broker_port}")
-        print(f"   Job ID: {self.job_id}")
+        logger.info("Starting evaluation for %ds", self.duration)
+        logger.info("Broker: %s:%d, Job ID: %s", self.broker_host, self.broker_port, self.job_id)
         
-        # Start broker availability monitoring in parallel
         monitor_thread = threading.Thread(
             target=self.availability_monitor.monitor,
             args=(self.broker_host, self.broker_port, self.duration),
@@ -103,42 +79,35 @@ class EvaluationController:
         )
         monitor_thread.start()
 
-        # Setup and start MQTT with proper error handling
         try:
-            print(f"Connecting to MQTT broker at {self.broker_host}:{self.broker_port}")
+            logger.info("Connecting to MQTT broker at %s:%d", self.broker_host, self.broker_port)
             
             self.client.loop_start()
             
-            # Connect with error handling
             connect_result = self.client.connect(self.broker_host, self.broker_port, keepalive=60)
             if connect_result != 0:
                 raise Exception(f"Connect returned error code: {connect_result}")
             
-            # Wait for connection to establish
             connection_timeout = 10
             for i in range(connection_timeout):
                 if self.connected:
                     break
                 if self.connection_error:
                     raise Exception(f"Connection error: {self.connection_error}")
-                print(f"Waiting for connection... ({i+1}/{connection_timeout})")
+                logger.info("Waiting for connection... (%d/%d)", i+1, connection_timeout)
                 time.sleep(1)
             
             if not self.connected:
                 raise Exception("Failed to establish MQTT connection within timeout")
                 
-            print(f"Ready to collect data for {self.duration} seconds")
-            
-            # Wait for subscription to complete and messages to start flowing
-            print("Waiting for message flow to stabilize...")
+            logger.info("Ready to collect data for %d seconds", self.duration)
             time.sleep(5)
             
         except Exception as e:
-            print(f"MQTT setup failed: {e}")
+            logger.error("MQTT setup failed: %s", e)
             self.client.loop_stop()
             return {"error": str(e), "job_id": self.job_id}
 
-        # Collect data for specified duration
         start_time = time.time()
         last_count = 0
         last_report_time = start_time
@@ -149,72 +118,56 @@ class EvaluationController:
             current_count = self.message_count
             elapsed = int(current_time - start_time)
 
-                # drain HTTP-collected latency records into the tracker
             drained = 0
             if self.delay_queue is not None:
                 while True:
                     try:
                         rec = self.delay_queue.popleft()
                         self.latency_tracker.handle_message(rec)
-                        self.throughput_tracker.record_message()
+                        self.throughput_tracker.record_delay_message(rec)
                         drained += 1
                     except IndexError:
                         break
             self.message_count += drained
             
-            # Report progress every 5 seconds
             if current_time - last_report_time >= 5:
                 rate = (current_count - last_count) / (current_time - last_report_time)
                 remaining = self.duration - elapsed
-
                 total_delays = len(self.latency_tracker.delays)
-                print(f"Progress: {elapsed}s/{self.duration}s | "
-                    f"Delay samples: {total_delays} | "
-                    f"Rate: {rate:.1f} msg/s | Remaining: {remaining}s")
-                # Warn if no messages after 10 seconds
+                
+                logger.info("Progress: %ds/%ds | Samples: %d | Rate: %.1f msg/s | Remaining: %ds",
+                           elapsed, self.duration, total_delays, rate, remaining)
+                
                 if current_count == 0 and elapsed >= 10:
                     no_message_warnings += 1
-                    print(f"WARNING: No messages received after {elapsed} seconds!")
-                    if no_message_warnings == 1:
-                        print("   Possible issues:")
-                        print("   - Check if publishers are deployed and running")
-                        print("   - Verify broker connectivity")
-                        print("   - Ensure topics match between publishers and subscribers")
-                        print("   - Check Node-RED logs for errors")
+                    logger.warning("No messages received after %d seconds!", elapsed)
                 
                 last_count = current_count
                 last_report_time = current_time
                 
             time.sleep(1)
 
-        print(f"Data collection finished. Total delay messages: {self.message_count}")
-        print(f"Total latency samples collected: {len(self.latency_tracker.delays)}")
+        logger.info("Data collection finished. Total messages: %d, Latency samples: %d",
+                   self.message_count, len(self.latency_tracker.delays))
 
-
-        # Shutdown MQTT and monitoring
         self.client.loop_stop()
         self.client.disconnect()
         monitor_thread.join(timeout=3)
 
-        # Gather stats with debug info
         latency_stats = self.latency_tracker.get_stats()
         throughput_stats = self.throughput_tracker.get_stats()
         availability_stats = self.availability_monitor.get_stats()
         
-        print(f"\nFinal Statistics:")
-        print(f"   Total delay messages processed: {self.message_count}")
-        print(f"   Unique publisher messages: {latency_stats.get('unique_publisher_messages', 0)}")
-        print(f"   Publisher throughput: {throughput_stats.get('publisher_throughput_mps', 0)} msg/s")
-        print(f"   Delay message throughput: {throughput_stats.get('delay_throughput_mps', 0)} msg/s")
-        print(f"   Latency stats: avg={latency_stats.get('avg_delay', 0)}ms, p50={latency_stats.get('p50', 0)}ms, p95={latency_stats.get('p95', 0)}ms")
-        print(f"   Availability: {availability_stats}")
+        logger.info("Final Statistics:")
+        logger.info("  Messages processed: %d", self.message_count)
+        logger.info("  Unique publisher messages: %d", latency_stats.get('unique_publisher_messages', 0))
+        logger.info("  Latency: avg=%.2fms, p50=%.2fms, p95=%.2fms",
+                   latency_stats.get('avg_delay', 0),
+                   latency_stats.get('p50', 0),
+                   latency_stats.get('p95', 0))
 
-        # Check if we got any data
         if self.message_count == 0:
-            print("\nERROR: No messages were received during evaluation!")
-            print("   This indicates a problem with the simulation setup.")
-            
-            # Add diagnostic information to the results
+            logger.error("No messages were received during evaluation!")
             latency_stats['diagnostic_info'] = {
                 'no_messages_received': True,
                 'evaluation_duration': self.duration,
@@ -222,12 +175,10 @@ class EvaluationController:
                 'broker_port': self.broker_port
             }
 
-        # statistics aggregation
         self.aggregator.add_module_stats("latency", latency_stats)
         self.aggregator.add_module_stats("throughput", throughput_stats)
         self.aggregator.add_module_stats("availability", availability_stats)
 
-        # Save + return summary
         result = self.aggregator.get_summary()
-        print(f"Evaluation complete. Summary saved to {result['saved_to']}")
+        logger.info("Evaluation complete. Summary saved to %s", result['saved_to'])
         return result["summary"]

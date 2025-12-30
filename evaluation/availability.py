@@ -1,5 +1,10 @@
+import logging
+import socket
 import time
 from statistics import mean
+
+logger = logging.getLogger(__name__)
+
 
 class AvailabilityMonitor:
     def __init__(self, check_interval=2, failure_threshold=2):
@@ -12,8 +17,6 @@ class AvailabilityMonitor:
         self.failed_checks = 0
 
     def check_broker(self, broker_host, broker_port):
-        """Return True if broker is reachable"""
-        import socket
         try:
             sock = socket.create_connection((broker_host, broker_port), timeout=1)
             sock.close()
@@ -22,10 +25,12 @@ class AvailabilityMonitor:
             return False
 
     def monitor(self, broker_host, broker_port, duration):
-        print(f"[Availability] Starting monitoring of {broker_host}:{broker_port} for {duration}s")
+        logger.info("Starting availability monitoring of %s:%d for %ds", 
+                   broker_host, broker_port, duration)
         start_time = time.time()
         consecutive_failures = 0
         failure_start = None
+        first_failure_time = None
 
         while time.time() - start_time < duration:
             reachable = self.check_broker(broker_host, broker_port)
@@ -37,20 +42,24 @@ class AvailabilityMonitor:
                     self.recoveries.append(recovery_time)
                     downtime = recovery_time - failure_start
                     self.downtime_events.append(downtime)
-                    print(f"[Availability] Broker recovered after {downtime:.2f}s downtime")
+                    logger.info("Broker recovered after %.2fs downtime", downtime)
                     failure_start = None
+                    first_failure_time = None
                 consecutive_failures = 0
             else:
                 self.failed_checks += 1
+                if consecutive_failures == 0:
+                    first_failure_time = time.time()
                 consecutive_failures += 1
                 if consecutive_failures == self.failure_threshold:
-                    failure_start = time.time()
+                    failure_start = first_failure_time
                     self.failures.append(failure_start)
-                    print(f"[Availability] Broker failure detected at check #{self.total_checks}")
+                    logger.warning("Broker failure detected at check #%d", self.total_checks)
 
             time.sleep(self.check_interval)
         
-        print(f"[Availability] Monitoring complete. Total checks: {self.total_checks}, Failed: {self.failed_checks}")
+        logger.info("Monitoring complete. Total checks: %d, Failed: %d", 
+                   self.total_checks, self.failed_checks)
 
     def get_stats(self):
         return {

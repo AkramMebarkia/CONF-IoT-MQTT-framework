@@ -1,6 +1,8 @@
+import logging
 import time
 from collections import deque
 
+logger = logging.getLogger(__name__)
 class FixedThroughputTracker:
     def __init__(self, interval_sec=1, window_size=60):
         self.interval = interval_sec
@@ -18,7 +20,7 @@ class FixedThroughputTracker:
         now = time.time()
         if self.start_time is None:
             self.start_time = now
-            print(f"[Throughput] Tracking started at {now}")
+            logger.debug("Throughput tracking started")
         
         # Always record the delay message timestamp
         self.timestamps.append(now)
@@ -38,14 +40,9 @@ class FixedThroughputTracker:
                 if message_key not in self.unique_publisher_messages:
                     self.unique_publisher_messages.add(message_key)
                     self.publisher_timestamps.append(now)
-                    
-                    # Log milestones
-                    unique_count = len(self.unique_publisher_messages)
-                    if unique_count in [1, 10, 50, 100, 500, 1000] or unique_count % 1000 == 0:
-                        print(f"[Throughput] Milestone: {unique_count} unique publisher messages tracked")
                         
         except Exception as e:
-            print(f"[Throughput] Error extracting publisher info: {e}")
+            logger.error("Error extracting publisher info: %s", e)
 
     def record_message(self):
         """Legacy method - just record timestamp"""
@@ -59,7 +56,7 @@ class FixedThroughputTracker:
     def get_publisher_throughput(self, duration=None):
         """Calculate throughput based on unique publisher messages"""
         if not self.publisher_timestamps:
-            print("[Throughput] No unique publisher messages recorded")
+            logger.debug("No unique publisher messages recorded")
             return 0.0
 
         timestamps_list = list(self.publisher_timestamps)
@@ -77,7 +74,7 @@ class FixedThroughputTracker:
             else:
                 throughput = 0.0
                 
-            print(f"[Throughput] Publisher: {len(relevant_messages)} msgs in {duration}s = {throughput:.2f} msg/s")
+            logger.debug("Publisher: %d msgs in %ds = %.2f msg/s", len(relevant_messages), duration, throughput)
             return round(throughput, 2)
 
         # Calculate based on actual time range
@@ -87,7 +84,7 @@ class FixedThroughputTracker:
             time_span = max(end - start, 0.001)
             throughput = len(timestamps_list) / time_span
             
-            print(f"[Throughput] Publisher (full): {len(timestamps_list)} msgs in {time_span:.1f}s = {throughput:.2f} msg/s")
+            logger.debug("Publisher (full): %d msgs in %.1fs = %.2f msg/s", len(timestamps_list), time_span, throughput)
         else:
             throughput = 0.0
 
@@ -96,7 +93,7 @@ class FixedThroughputTracker:
     def get_throughput(self, duration=None):
         """Calculate throughput based on all delay messages"""
         if not self.timestamps:
-            print("[Throughput] No delay messages recorded")
+            logger.debug("No delay messages recorded")
             return 0.0
 
         timestamps_list = list(self.timestamps)
@@ -112,7 +109,7 @@ class FixedThroughputTracker:
             else:
                 throughput = 0.0
                 
-            print(f"[Throughput] Delay: {len(relevant_messages)} msgs in {duration}s = {throughput:.2f} msg/s")
+            logger.debug("Delay: %d msgs in %ds = %.2f msg/s", len(relevant_messages), duration, throughput)
             return round(throughput, 2)
 
         # Calculate based on actual time range
@@ -162,7 +159,7 @@ class FixedThroughputTracker:
             "end_time": time.time() if self.start_time else None
         }
         
-        print(f"[Throughput] Final stats: {unique_count} unique msgs, {delay_count} delay msgs, "
-              f"factor={efficiency}x, pub_rate={publisher_throughput} msg/s")
+        logger.debug("Final stats: %d unique msgs, %d delay msgs, factor=%.2fx, rate=%.2f msg/s",
+                    unique_count, delay_count, efficiency, publisher_throughput)
         
         return stats
