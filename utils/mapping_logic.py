@@ -1,3 +1,45 @@
+def topic_matches_pattern(topic: str, pattern: str) -> bool:
+    """
+    Check if a concrete topic matches an MQTT subscription pattern with wildcards.
+    
+    Args:
+        topic: Concrete topic like "sensor/room1/temperature"
+        pattern: Subscription pattern like "sensor/+/temperature" or "sensor/#"
+    
+    Returns:
+        True if topic matches the pattern
+    
+    MQTT Wildcards:
+        + : matches exactly one level
+        # : matches zero or more levels (must be last)
+    
+    Examples:
+        topic_matches_pattern("sensor/room1/temp", "sensor/+/temp") -> True
+        topic_matches_pattern("sensor/room1/temp", "sensor/#") -> True
+        topic_matches_pattern("sensor/room1/temp", "device/+/temp") -> False
+    """
+    if pattern == "#":
+        return True
+    
+    if pattern == topic:
+        return True
+    
+    pattern_parts = pattern.split('/')
+    topic_parts = topic.split('/')
+    
+    for i, p in enumerate(pattern_parts):
+        if p == '#':
+            return True
+        if p == '+':
+            if i >= len(topic_parts):
+                return False
+            continue
+        if i >= len(topic_parts) or topic_parts[i] != p:
+            return False
+    
+    return len(pattern_parts) == len(topic_parts)
+
+
 def enforce_smart_mapping(instance_count: int, topic_count: int, mode: str = "round_robin"):
     """
     Smart mapping strategies for publisher-to-topic assignment

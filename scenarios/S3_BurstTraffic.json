@@ -1,0 +1,106 @@
+{
+    "scenario_name": "Burst Traffic Pattern",
+    "scenario_id": "S3_BurstTraffic",
+    "description": "Periodic bulk data upload, shift reports, batch analytics",
+    "topics": [
+        "batch/shift_report",
+        "batch/quality_data",
+        "batch/production_log",
+        "batch/inventory_update",
+        "batch/analytics_feed"
+    ],
+    "publisher_groups": [
+        {
+            "group_name": "ShiftReporters",
+            "count": 10,
+            "frequency": 0.1,
+            "payload_size": 8192,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "batch/shift_report"
+            ]
+        },
+        {
+            "group_name": "QualityInspectors",
+            "count": 10,
+            "frequency": 0.1,
+            "payload_size": 8192,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "batch/quality_data"
+            ]
+        },
+        {
+            "group_name": "ProductionLoggers",
+            "count": 10,
+            "frequency": 0.1,
+            "payload_size": 8192,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "batch/production_log"
+            ]
+        },
+        {
+            "group_name": "InventoryTrackers",
+            "count": 10,
+            "frequency": 0.1,
+            "payload_size": 8192,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "batch/inventory_update"
+            ]
+        },
+        {
+            "group_name": "AnalyticsFeeders",
+            "count": 10,
+            "frequency": 0.1,
+            "payload_size": 8192,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "batch/analytics_feed"
+            ]
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "group_name": "CentralAnalytics",
+            "count": 2,
+            "qos": 1,
+            "topics": [
+                "batch/shift_report",
+                "batch/quality_data",
+                "batch/production_log",
+                "batch/inventory_update",
+                "batch/analytics_feed"
+            ]
+        },
+        {
+            "group_name": "DataWarehouse",
+            "count": 2,
+            "qos": 1,
+            "topics": [
+                "batch/shift_report",
+                "batch/quality_data",
+                "batch/production_log"
+            ]
+        },
+        {
+            "group_name": "ERPIntegration",
+            "count": 1,
+            "qos": 1,
+            "topics": [
+                "batch/inventory_update",
+                "batch/production_log"
+            ]
+        }
+    ],
+    "evaluation": {
+        "duration": 300,
+        "warmup": 10
+    }
+}

@@ -1,0 +1,107 @@
+{
+    "scenario_name": "High-Frequency Sensor Network",
+    "scenario_id": "S1_HighFrequency",
+    "description": "Manufacturing floor with vibration sensors, temperature monitors",
+    "topics": [
+        "factory/line1/vibration",
+        "factory/line1/temperature",
+        "factory/line2/vibration",
+        "factory/line2/temperature",
+        "factory/line3/vibration",
+        "factory/line3/temperature",
+        "factory/status/machine1",
+        "factory/status/machine2",
+        "factory/status/machine3",
+        "factory/status/machine4"
+    ],
+    "publisher_groups": [
+        {
+            "group_name": "VibrationSensors",
+            "count": 30,
+            "frequency": 0.1,
+            "payload_size": 128,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "factory/line1/vibration",
+                "factory/line2/vibration",
+                "factory/line3/vibration"
+            ]
+        },
+        {
+            "group_name": "TemperatureSensors",
+            "count": 30,
+            "frequency": 0.1,
+            "payload_size": 128,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "factory/line1/temperature",
+                "factory/line2/temperature",
+                "factory/line3/temperature"
+            ]
+        },
+        {
+            "group_name": "MachineStatus",
+            "count": 40,
+            "frequency": 0.1,
+            "payload_size": 128,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "factory/status/machine1",
+                "factory/status/machine2",
+                "factory/status/machine3",
+                "factory/status/machine4"
+            ]
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "group_name": "MainDashboard",
+            "count": 3,
+            "qos": 0,
+            "topics": [
+                "factory/line1/vibration",
+                "factory/line1/temperature",
+                "factory/line2/vibration",
+                "factory/line2/temperature"
+            ]
+        },
+        {
+            "group_name": "LinePLCs",
+            "count": 3,
+            "qos": 0,
+            "topics": [
+                "factory/line1/vibration",
+                "factory/line2/vibration",
+                "factory/line3/vibration"
+            ]
+        },
+        {
+            "group_name": "AnalyticsEngine",
+            "count": 2,
+            "qos": 0,
+            "topics": [
+                "factory/line1/temperature",
+                "factory/line2/temperature",
+                "factory/line3/temperature"
+            ]
+        },
+        {
+            "group_name": "MachineMonitors",
+            "count": 2,
+            "qos": 0,
+            "topics": [
+                "factory/status/machine1",
+                "factory/status/machine2",
+                "factory/status/machine3",
+                "factory/status/machine4"
+            ]
+        }
+    ],
+    "evaluation": {
+        "duration": 120,
+        "warmup": 10
+    }
+}

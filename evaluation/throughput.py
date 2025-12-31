@@ -53,6 +53,16 @@ class FixedThroughputTracker:
         self.timestamps.append(now)
         self.message_count += 1
 
+    def reset(self):
+        """Reset all collected data for fresh start after warm-up"""
+        self.timestamps.clear()
+        self.start_time = None
+        self.message_count = 0
+        self.unique_publisher_messages.clear()
+        self.publisher_timestamps.clear()
+        self.publisher_rates.clear()
+        logger.info("Throughput tracker reset")
+
     def get_publisher_throughput(self, duration=None):
         """Calculate throughput based on unique publisher messages"""
         if not self.publisher_timestamps:

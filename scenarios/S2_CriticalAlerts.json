@@ -1,0 +1,114 @@
+{
+    "scenario_name": "Critical Event Alerting",
+    "scenario_id": "S2_CriticalAlerts",
+    "description": "Emergency alerts, equipment failures, safety interlocks",
+    "topics": [
+        "alerts/fire",
+        "alerts/gas_leak",
+        "alerts/intrusion",
+        "alerts/equipment_failure",
+        "safety/emergency_stop",
+        "safety/zone_lockdown"
+    ],
+    "publisher_groups": [
+        {
+            "group_name": "FireAlarms",
+            "count": 5,
+            "frequency": 10,
+            "payload_size": 2048,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "alerts/fire"
+            ]
+        },
+        {
+            "group_name": "GasDetectors",
+            "count": 5,
+            "frequency": 10,
+            "payload_size": 2048,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "alerts/gas_leak"
+            ]
+        },
+        {
+            "group_name": "SecuritySensors",
+            "count": 5,
+            "frequency": 10,
+            "payload_size": 2048,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "alerts/intrusion"
+            ]
+        },
+        {
+            "group_name": "EquipmentMonitors",
+            "count": 5,
+            "frequency": 10,
+            "payload_size": 2048,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "alerts/equipment_failure"
+            ]
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "group_name": "ControlRoom",
+            "count": 5,
+            "qos": 2,
+            "topics": [
+                "alerts/fire",
+                "alerts/gas_leak",
+                "alerts/intrusion",
+                "alerts/equipment_failure"
+            ]
+        },
+        {
+            "group_name": "SafetyPLCs",
+            "count": 10,
+            "qos": 2,
+            "topics": [
+                "alerts/fire",
+                "alerts/gas_leak",
+                "safety/emergency_stop"
+            ]
+        },
+        {
+            "group_name": "SecurityTerminals",
+            "count": 15,
+            "qos": 2,
+            "topics": [
+                "alerts/intrusion",
+                "safety/zone_lockdown"
+            ]
+        },
+        {
+            "group_name": "MaintenanceAlerts",
+            "count": 10,
+            "qos": 2,
+            "topics": [
+                "alerts/equipment_failure"
+            ]
+        },
+        {
+            "group_name": "ComplianceLogger",
+            "count": 10,
+            "qos": 2,
+            "topics": [
+                "alerts/fire",
+                "alerts/gas_leak",
+                "alerts/intrusion",
+                "alerts/equipment_failure"
+            ]
+        }
+    ],
+    "evaluation": {
+        "duration": 180,
+        "warmup": 10
+    }
+}

@@ -33,7 +33,8 @@ delay_data = deque(maxlen=20000)
 job_status = {}
 
 NODE_RED_URL = os.getenv('NODE_RED_URL', 'http://localhost:1880')
-BATCH_SIZE = int(os.getenv('BATCH_SIZE', '100'))
+BATCH_SIZE = int(os.getenv('BATCH_SIZE', '500'))
+LATENCY_CALLBACK_URL = os.getenv('LATENCY_CALLBACK_URL', 'http://host.docker.internal:5000/api/latency_batch')
 
 
 def get_broker_container(broker_name):
@@ -212,23 +213,19 @@ if (!global.get('seq')[pubName]) {{
 global.get('seq')[pubName]++;
 var seqId = global.get('seq')[pubName];
 
-var pubNameBuf = Buffer.from(pubName, 'utf8');
-var headerSize = 8 + 4 + 1 + pubNameBuf.length;
-var buffer = Buffer.alloc(Math.max(headerSize, payloadSize));
+var payload = {{
+    t: Date.now(),
+    s: seqId,
+    p: pubName
+}};
 
-var now = BigInt(Date.now());
-buffer.writeBigInt64BE(now, 0);
-buffer.writeUInt32BE(seqId, 8);
-buffer.writeUInt8(pubNameBuf.length, 12);
-pubNameBuf.copy(buffer, 13);
-
-if (payloadSize > headerSize) {{
-    buffer.fill('X', headerSize);
+if (payloadSize > 50) {{
+    payload.d = 'X'.repeat(payloadSize - 50);
 }}
 
 return {{
     topic: topic,
-    payload: buffer,
+    payload: JSON.stringify(payload),
     qos: {pub.get('qos', 1)},
     retain: {str(pub.get('retain', False)).lower()},
 }};
@@ -269,7 +266,7 @@ return {{
                     "name": f"{sub['name']} ← {topic}",
                     "topic": topic,
                     "qos": str(sub.get("qos", 1)),
-                    "datatype": "buffer",
+                    "datatype": "auto",
                     "broker": broker_config_id,
                     "x": 100,
                     "y": y,
@@ -284,37 +281,28 @@ return {{
 const N = {BATCH_SIZE};
 const bufKey = '{sub['name']}_latBuf';
 let buf = context.get(bufKey) || [];
-let count = context.get('count') || 0;
 
 try {{
-    const b = Buffer.isBuffer(msg.payload) ? msg.payload : Buffer.from(msg.payload);
-    const ts_sent = Number(b.readBigInt64BE(0));
-    const seq_id = b.readUInt32BE(8);
-    const nameLength = b.readUInt8(12);
-    const publisher_name = b.toString('utf8', 13, 13 + nameLength);
+    const d = JSON.parse(msg.payload);
     const now = Date.now();
-    const latency = now - ts_sent;
+    const latency = now - d.t;
 
     if (latency < 0 || latency > 60000) {{
-        node.warn('Invalid delay ' + latency + 'ms from ' + publisher_name);
         return null;
     }}
-
-    count++;
-    context.set('count', count);
 
     buf.push({{
         subscriber: '{sub['name']}',
         topic: msg.topic,
         delay: latency,
-        publisher_name: publisher_name,
-        seq_id: seq_id,
+        publisher_name: d.p,
+        seq_id: d.s,
         timestamp: now
     }});
     context.set(bufKey, buf);
 
     if (buf.length >= N) {{
-        msg.url = 'http://host.docker.internal:5000/api/latency_batch';
+        msg.url = '{LATENCY_CALLBACK_URL}';
         msg.method = 'POST';
         msg.headers = {{ 'Content-Type': 'application/json' }};
         msg.payload = buf;
@@ -325,7 +313,6 @@ try {{
     return null;
 
 }} catch (e) {{
-    node.error('Latency calc failed: ' + e.message);
     return null;
 }}
 """,
@@ -407,17 +394,21 @@ def control_simulation(action):
                 if action == "stop":
                     node["repeat"] = ""
                     node["once"] = False
+                    node["onceDelay"] = 0.1
+                    node["crontab"] = ""
+                elif action == "start":
+                    pass
                 inject_count += 1
 
         resp = requests.post(
             f'{NODE_RED_URL}/flows',
-            headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'flows'},
+            headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'full'},
             json=flows,
-            timeout=10
+            timeout=30
         )
         
         if resp.status_code == 204:
-            logger.info("Simulation %s: affected %d inject nodes", action, inject_count)
+            logger.info("Simulation %s: affected %d inject nodes (full redeploy)", action, inject_count)
             return jsonify(ok=True, action=action, inject_nodes_affected=inject_count)
         else:
             return jsonify(error=f"Failed to {action}: {resp.text}"), 500
@@ -625,7 +616,8 @@ def run_tests_in_background(job_id, args):
             broker_port=broker_port,
             duration=duration,
             job_id=job_id,
-            delay_queue=delay_data
+            delay_queue=delay_data,
+            warmup_seconds=int(args.get('warmup', 10))
         )
         
         eval_results = controller.run()

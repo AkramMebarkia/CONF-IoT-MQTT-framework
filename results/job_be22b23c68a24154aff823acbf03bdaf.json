@@ -1,0 +1,2164 @@
+{
+  "job_id": "be22b23c68a24154aff823acbf03bdaf",
+  "broker_name": "localhost",
+  "timestamp": "2025-12-31T12:39:10.584899",
+  "latency_count": 676200,
+  "latency_processed_count": 676200,
+  "latency_error_count": 0,
+  "latency_error_rate": 0.0,
+  "latency_unique_publisher_messages": 91801,
+  "latency_avg_delay": 3.95,
+  "latency_min_delay": 0.0,
+  "latency_max_delay": 40.0,
+  "latency_jitter": 3.32,
+  "latency_p50": 3.0,
+  "latency_p95": 10.0,
+  "latency_p99": 18.0,
+  "latency_publisher_breakdown": {
+    "VibrationSensors_21": 574,
+    "VibrationSensors_22": 574,
+    "VibrationSensors_23": 574,
+    "VibrationSensors_24": 574,
+    "VibrationSensors_25": 574,
+    "VibrationSensors_26": 574,
+    "VibrationSensors_27": 574,
+    "VibrationSensors_28": 574,
+    "VibrationSensors_29": 574,
+    "VibrationSensors_30": 574,
+    "VibrationSensors_31": 574,
+    "VibrationSensors_32": 574,
+    "VibrationSensors_33": 574,
+    "VibrationSensors_34": 574,
+    "VibrationSensors_35": 574,
+    "VibrationSensors_36": 574,
+    "VibrationSensors_37": 574,
+    "VibrationSensors_38": 574,
+    "VibrationSensors_39": 574,
+    "VibrationSensors_40": 574,
+    "VibrationSensors_1": 576,
+    "VibrationSensors_2": 576,
+    "VibrationSensors_3": 576,
+    "VibrationSensors_4": 576,
+    "VibrationSensors_5": 576,
+    "VibrationSensors_6": 576,
+    "VibrationSensors_7": 576,
+    "VibrationSensors_8": 576,
+    "VibrationSensors_9": 576,
+    "VibrationSensors_10": 576,
+    "VibrationSensors_11": 576,
+    "VibrationSensors_12": 576,
+    "VibrationSensors_13": 576,
+    "VibrationSensors_14": 576,
+    "VibrationSensors_15": 576,
+    "VibrationSensors_16": 576,
+    "VibrationSensors_17": 576,
+    "VibrationSensors_18": 576,
+    "VibrationSensors_19": 576,
+    "VibrationSensors_20": 576,
+    "TemperatureSensors_4": 572,
+    "TemperatureSensors_1": 572,
+    "TemperatureSensors_2": 572,
+    "TemperatureSensors_3": 572,
+    "TemperatureSensors_5": 572,
+    "TemperatureSensors_6": 572,
+    "TemperatureSensors_7": 572,
+    "TemperatureSensors_8": 572,
+    "TemperatureSensors_9": 572,
+    "TemperatureSensors_10": 572,
+    "TemperatureSensors_11": 572,
+    "TemperatureSensors_12": 572,
+    "TemperatureSensors_13": 572,
+    "TemperatureSensors_14": 572,
+    "TemperatureSensors_15": 572,
+    "TemperatureSensors_16": 572,
+    "TemperatureSensors_17": 572,
+    "TemperatureSensors_18": 572,
+    "TemperatureSensors_19": 572,
+    "TemperatureSensors_20": 572,
+    "TemperatureSensors_21": 572,
+    "TemperatureSensors_22": 572,
+    "TemperatureSensors_23": 572,
+    "TemperatureSensors_24": 572,
+    "TemperatureSensors_25": 572,
+    "TemperatureSensors_26": 572,
+    "TemperatureSensors_27": 572,
+    "TemperatureSensors_28": 572,
+    "TemperatureSensors_29": 572,
+    "TemperatureSensors_30": 572,
+    "TemperatureSensors_31": 572,
+    "TemperatureSensors_32": 572,
+    "TemperatureSensors_33": 572,
+    "TemperatureSensors_34": 572,
+    "TemperatureSensors_35": 572,
+    "TemperatureSensors_36": 572,
+    "TemperatureSensors_37": 572,
+    "TemperatureSensors_38": 572,
+    "TemperatureSensors_39": 572,
+    "TemperatureSensors_40": 572,
+    "TemperatureSensors_41": 572,
+    "TemperatureSensors_42": 572,
+    "TemperatureSensors_43": 572,
+    "TemperatureSensors_44": 572,
+    "TemperatureSensors_45": 572,
+    "TemperatureSensors_46": 572,
+    "TemperatureSensors_47": 572,
+    "TemperatureSensors_48": 572,
+    "TemperatureSensors_49": 572,
+    "TemperatureSensors_50": 572,
+    "PressureSensors_33": 567,
+    "PressureSensors_34": 566,
+    "PressureSensors_35": 565,
+    "PressureSensors_36": 566,
+    "PressureSensors_37": 566,
+    "PressureSensors_38": 566,
+    "PressureSensors_39": 566,
+    "PressureSensors_40": 566,
+    "PressureSensors_41": 566,
+    "PressureSensors_42": 566,
+    "PressureSensors_43": 566,
+    "PressureSensors_44": 566,
+    "PressureSensors_45": 566,
+    "PressureSensors_46": 566,
+    "PressureSensors_47": 566,
+    "PressureSensors_48": 566,
+    "PressureSensors_49": 566,
+    "PressureSensors_50": 566,
+    "PressureSensors_9": 566,
+    "PressureSensors_1": 566,
+    "PressureSensors_2": 566,
+    "PressureSensors_3": 566,
+    "PressureSensors_4": 566,
+    "PressureSensors_5": 566,
+    "PressureSensors_6": 566,
+    "PressureSensors_7": 566,
+    "PressureSensors_8": 566,
+    "PressureSensors_10": 566,
+    "PressureSensors_11": 566,
+    "PressureSensors_12": 566,
+    "PressureSensors_13": 566,
+    "PressureSensors_14": 566,
+    "PressureSensors_15": 566,
+    "PressureSensors_16": 566,
+    "PressureSensors_17": 566,
+    "PressureSensors_18": 566,
+    "PressureSensors_19": 566,
+    "PressureSensors_20": 566,
+    "PressureSensors_21": 566,
+    "PressureSensors_22": 566,
+    "PressureSensors_23": 566,
+    "PressureSensors_24": 566,
+    "PressureSensors_25": 566,
+    "PressureSensors_26": 566,
+    "PressureSensors_27": 566,
+    "PressureSensors_28": 566,
+    "PressureSensors_29": 566,
+    "PressureSensors_30": 566,
+    "PressureSensors_31": 566,
+    "PressureSensors_32": 566,
+    "MachineStatus_2": 281,
+    "MachineStatus_5": 280,
+    "MachineStatus_8": 280,
+    "MachineStatus_11": 280,
+    "MachineStatus_14": 280,
+    "MachineStatus_17": 280,
+    "MachineStatus_20": 280,
+    "MachineStatus_23": 280,
+    "MachineStatus_26": 280,
+    "MachineStatus_29": 280,
+    "MachineStatus_3": 280,
+    "MachineStatus_6": 280,
+    "MachineStatus_9": 280,
+    "MachineStatus_12": 280,
+    "MachineStatus_15": 280,
+    "MachineStatus_18": 280,
+    "MachineStatus_21": 280,
+    "MachineStatus_24": 280,
+    "MachineStatus_30": 280,
+    "MachineStatus_27": 280,
+    "MachineStatus_1": 270,
+    "MachineStatus_4": 270,
+    "MachineStatus_7": 270,
+    "MachineStatus_10": 270,
+    "MachineStatus_13": 270,
+    "MachineStatus_19": 270,
+    "MachineStatus_22": 270,
+    "MachineStatus_25": 270,
+    "MachineStatus_28": 270,
+    "MachineStatus_16": 270,
+    "QualityInspection_21": 120,
+    "QualityInspection_22": 120,
+    "QualityInspection_23": 120,
+    "QualityInspection_24": 120,
+    "QualityInspection_25": 120,
+    "QualityInspection_26": 120,
+    "QualityInspection_28": 120,
+    "QualityInspection_29": 120,
+    "QualityInspection_30": 120,
+    "QualityInspection_27": 120,
+    "QualityInspection_1": 120,
+    "QualityInspection_2": 120,
+    "QualityInspection_3": 120,
+    "QualityInspection_4": 120,
+    "QualityInspection_5": 120,
+    "QualityInspection_6": 120,
+    "QualityInspection_7": 120,
+    "QualityInspection_8": 120,
+    "QualityInspection_9": 120,
+    "QualityInspection_10": 120,
+    "QualityInspection_11": 120,
+    "QualityInspection_12": 120,
+    "QualityInspection_13": 120,
+    "QualityInspection_14": 120,
+    "QualityInspection_15": 120,
+    "QualityInspection_16": 120,
+    "QualityInspection_17": 120,
+    "QualityInspection_18": 120,
+    "QualityInspection_19": 120,
+    "QualityInspection_20": 120
+  },
+  "latency_stratified_stats": {
+    "by_publisher": {
+      "VibrationSensors_21": {
+        "count": 1000,
+        "avg": 2.34,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 11.03
+      },
+      "VibrationSensors_22": {
+        "count": 1000,
+        "avg": 2.41,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 5.05,
+        "p99": 11.03
+      },
+      "VibrationSensors_23": {
+        "count": 1000,
+        "avg": 2.02,
+        "min": 0.0,
+        "max": 12.0,
+        "p50": 1.0,
+        "p95": 5.0,
+        "p99": 7.05
+      },
+      "VibrationSensors_24": {
+        "count": 1000,
+        "avg": 2.43,
+        "min": 1.0,
+        "max": 12.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 8.04
+      },
+      "VibrationSensors_25": {
+        "count": 1000,
+        "avg": 2.59,
+        "min": 1.0,
+        "max": 12.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 8.04
+      },
+      "VibrationSensors_26": {
+        "count": 1000,
+        "avg": 2.78,
+        "min": 1.0,
+        "max": 12.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 8.04
+      },
+      "VibrationSensors_27": {
+        "count": 1000,
+        "avg": 2.55,
+        "min": 1.0,
+        "max": 8.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 8.0
+      },
+      "VibrationSensors_28": {
+        "count": 1000,
+        "avg": 2.7,
+        "min": 1.0,
+        "max": 9.0,
+        "p50": 2.0,
+        "p95": 5.05,
+        "p99": 8.0
+      },
+      "VibrationSensors_29": {
+        "count": 1000,
+        "avg": 2.85,
+        "min": 1.0,
+        "max": 9.0,
+        "p50": 2.0,
+        "p95": 5.05,
+        "p99": 8.01
+      },
+      "VibrationSensors_30": {
+        "count": 1000,
+        "avg": 2.93,
+        "min": 2.0,
+        "max": 9.0,
+        "p50": 3.0,
+        "p95": 5.05,
+        "p99": 9.0
+      },
+      "VibrationSensors_31": {
+        "count": 1000,
+        "avg": 3.04,
+        "min": 2.0,
+        "max": 9.0,
+        "p50": 3.0,
+        "p95": 6.0,
+        "p99": 9.0
+      },
+      "VibrationSensors_32": {
+        "count": 1000,
+        "avg": 3.15,
+        "min": 2.0,
+        "max": 9.0,
+        "p50": 3.0,
+        "p95": 6.0,
+        "p99": 9.0
+      },
+      "VibrationSensors_33": {
+        "count": 1000,
+        "avg": 3.25,
+        "min": 2.0,
+        "max": 9.0,
+        "p50": 3.0,
+        "p95": 6.0,
+        "p99": 9.0
+      },
+      "VibrationSensors_34": {
+        "count": 1000,
+        "avg": 3.44,
+        "min": 2.0,
+        "max": 12.0,
+        "p50": 3.0,
+        "p95": 6.0,
+        "p99": 12.0
+      },
+      "VibrationSensors_35": {
+        "count": 1000,
+        "avg": 3.56,
+        "min": 2.0,
+        "max": 12.0,
+        "p50": 3.0,
+        "p95": 6.0,
+        "p99": 12.0
+      },
+      "VibrationSensors_36": {
+        "count": 1000,
+        "avg": 3.75,
+        "min": 2.0,
+        "max": 13.0,
+        "p50": 3.0,
+        "p95": 7.0,
+        "p99": 13.0
+      },
+      "VibrationSensors_37": {
+        "count": 1000,
+        "avg": 4.01,
+        "min": 2.0,
+        "max": 13.0,
+        "p50": 3.0,
+        "p95": 9.05,
+        "p99": 13.0
+      },
+      "VibrationSensors_38": {
+        "count": 1000,
+        "avg": 3.19,
+        "min": 1.0,
+        "max": 11.0,
+        "p50": 3.0,
+        "p95": 6.05,
+        "p99": 11.0
+      },
+      "VibrationSensors_39": {
+        "count": 1000,
+        "avg": 2.71,
+        "min": 1.0,
+        "max": 11.0,
+        "p50": 2.0,
+        "p95": 5.05,
+        "p99": 11.0
+      },
+      "VibrationSensors_40": {
+        "count": 1000,
+        "avg": 2.84,
+        "min": 1.0,
+        "max": 11.0,
+        "p50": 2.0,
+        "p95": 5.05,
+        "p99": 11.0
+      },
+      "VibrationSensors_1": {
+        "count": 1000,
+        "avg": 3.53,
+        "min": 0.0,
+        "max": 15.0,
+        "p50": 3.0,
+        "p95": 8.05,
+        "p99": 12.03
+      },
+      "VibrationSensors_2": {
+        "count": 1000,
+        "avg": 3.96,
+        "min": 1.0,
+        "max": 16.0,
+        "p50": 3.0,
+        "p95": 10.0,
+        "p99": 16.0
+      },
+      "VibrationSensors_3": {
+        "count": 1000,
+        "avg": 4.54,
+        "min": 1.0,
+        "max": 27.0,
+        "p50": 3.0,
+        "p95": 11.05,
+        "p99": 18.08
+      },
+      "VibrationSensors_4": {
+        "count": 1000,
+        "avg": 2.77,
+        "min": 0.0,
+        "max": 16.0,
+        "p50": 2.0,
+        "p95": 6.0,
+        "p99": 14.02
+      },
+      "VibrationSensors_5": {
+        "count": 1000,
+        "avg": 3.04,
+        "min": 0.0,
+        "max": 16.0,
+        "p50": 2.0,
+        "p95": 6.05,
+        "p99": 14.02
+      },
+      "VibrationSensors_6": {
+        "count": 1000,
+        "avg": 3.28,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 3.0,
+        "p95": 7.0,
+        "p99": 14.03
+      },
+      "VibrationSensors_7": {
+        "count": 1000,
+        "avg": 3.12,
+        "min": 0.0,
+        "max": 17.0,
+        "p50": 2.0,
+        "p95": 6.05,
+        "p99": 14.03
+      },
+      "VibrationSensors_8": {
+        "count": 1000,
+        "avg": 3.26,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 3.0,
+        "p95": 6.05,
+        "p99": 15.02
+      },
+      "VibrationSensors_9": {
+        "count": 1000,
+        "avg": 3.28,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 3.0,
+        "p95": 6.05,
+        "p99": 15.02
+      },
+      "VibrationSensors_10": {
+        "count": 1000,
+        "avg": 3.43,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 3.0,
+        "p95": 6.1,
+        "p99": 15.02
+      },
+      "VibrationSensors_11": {
+        "count": 1000,
+        "avg": 3.56,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 3.0,
+        "p95": 6.1,
+        "p99": 15.02
+      },
+      "VibrationSensors_12": {
+        "count": 1000,
+        "avg": 3.66,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 3.0,
+        "p95": 7.05,
+        "p99": 15.02
+      },
+      "VibrationSensors_13": {
+        "count": 1000,
+        "avg": 3.79,
+        "min": 1.0,
+        "max": 18.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 15.02
+      },
+      "VibrationSensors_14": {
+        "count": 1000,
+        "avg": 3.96,
+        "min": 1.0,
+        "max": 20.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 16.04
+      },
+      "VibrationSensors_15": {
+        "count": 1000,
+        "avg": 4.18,
+        "min": 2.0,
+        "max": 20.0,
+        "p50": 3.0,
+        "p95": 8.05,
+        "p99": 16.04
+      },
+      "VibrationSensors_16": {
+        "count": 1000,
+        "avg": 4.05,
+        "min": 1.0,
+        "max": 20.0,
+        "p50": 4.0,
+        "p95": 7.05,
+        "p99": 10.1
+      },
+      "VibrationSensors_17": {
+        "count": 1000,
+        "avg": 4.04,
+        "min": 1.0,
+        "max": 20.0,
+        "p50": 4.0,
+        "p95": 7.05,
+        "p99": 10.1
+      },
+      "VibrationSensors_18": {
+        "count": 1000,
+        "avg": 1.64,
+        "min": 0.0,
+        "max": 10.0,
+        "p50": 1.0,
+        "p95": 4.0,
+        "p99": 10.0
+      },
+      "VibrationSensors_19": {
+        "count": 1000,
+        "avg": 2.17,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 10.03
+      },
+      "VibrationSensors_20": {
+        "count": 1000,
+        "avg": 2.28,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 10.04
+      },
+      "TemperatureSensors_4": {
+        "count": 1000,
+        "avg": 3.29,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 13.0
+      },
+      "TemperatureSensors_1": {
+        "count": 1000,
+        "avg": 3.38,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 13.0
+      },
+      "TemperatureSensors_2": {
+        "count": 1000,
+        "avg": 3.64,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 13.0
+      },
+      "TemperatureSensors_3": {
+        "count": 1000,
+        "avg": 3.72,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 13.0
+      },
+      "TemperatureSensors_5": {
+        "count": 1000,
+        "avg": 3.68,
+        "min": 0.0,
+        "max": 14.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 13.0
+      },
+      "TemperatureSensors_6": {
+        "count": 1000,
+        "avg": 4.2,
+        "min": 2.0,
+        "max": 15.0,
+        "p50": 3.0,
+        "p95": 10.0,
+        "p99": 13.0
+      },
+      "TemperatureSensors_7": {
+        "count": 1000,
+        "avg": 4.31,
+        "min": 2.0,
+        "max": 15.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_8": {
+        "count": 1000,
+        "avg": 4.41,
+        "min": 2.0,
+        "max": 15.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_9": {
+        "count": 1000,
+        "avg": 4.55,
+        "min": 2.0,
+        "max": 14.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_10": {
+        "count": 1000,
+        "avg": 4.67,
+        "min": 2.0,
+        "max": 14.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_11": {
+        "count": 1000,
+        "avg": 4.38,
+        "min": 2.0,
+        "max": 14.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_12": {
+        "count": 1000,
+        "avg": 4.4,
+        "min": 2.0,
+        "max": 14.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_13": {
+        "count": 1000,
+        "avg": 4.46,
+        "min": 1.0,
+        "max": 15.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_14": {
+        "count": 1000,
+        "avg": 4.57,
+        "min": 1.0,
+        "max": 15.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 15.0
+      },
+      "TemperatureSensors_15": {
+        "count": 1000,
+        "avg": 4.81,
+        "min": 1.0,
+        "max": 15.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 15.0
+      },
+      "TemperatureSensors_16": {
+        "count": 1000,
+        "avg": 4.98,
+        "min": 1.0,
+        "max": 15.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 15.0
+      },
+      "TemperatureSensors_17": {
+        "count": 1000,
+        "avg": 5.2,
+        "min": 2.0,
+        "max": 15.0,
+        "p50": 4.0,
+        "p95": 11.0,
+        "p99": 15.0
+      },
+      "TemperatureSensors_18": {
+        "count": 1000,
+        "avg": 5.68,
+        "min": 2.0,
+        "max": 35.0,
+        "p50": 4.0,
+        "p95": 13.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_19": {
+        "count": 1000,
+        "avg": 4.45,
+        "min": 0.0,
+        "max": 36.0,
+        "p50": 4.0,
+        "p95": 11.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_20": {
+        "count": 1000,
+        "avg": 4.54,
+        "min": 0.0,
+        "max": 36.0,
+        "p50": 4.0,
+        "p95": 11.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_21": {
+        "count": 1000,
+        "avg": 4.67,
+        "min": 1.0,
+        "max": 36.0,
+        "p50": 4.0,
+        "p95": 11.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_22": {
+        "count": 1000,
+        "avg": 4.78,
+        "min": 1.0,
+        "max": 36.0,
+        "p50": 4.0,
+        "p95": 11.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_23": {
+        "count": 1000,
+        "avg": 4.87,
+        "min": 1.0,
+        "max": 36.0,
+        "p50": 4.0,
+        "p95": 12.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_24": {
+        "count": 1000,
+        "avg": 4.93,
+        "min": 1.0,
+        "max": 36.0,
+        "p50": 4.0,
+        "p95": 12.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_25": {
+        "count": 1000,
+        "avg": 5.03,
+        "min": 1.0,
+        "max": 36.0,
+        "p50": 4.0,
+        "p95": 12.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_26": {
+        "count": 1000,
+        "avg": 5.09,
+        "min": 1.0,
+        "max": 37.0,
+        "p50": 4.0,
+        "p95": 12.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_27": {
+        "count": 1000,
+        "avg": 5.2,
+        "min": 1.0,
+        "max": 37.0,
+        "p50": 4.0,
+        "p95": 12.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_28": {
+        "count": 1000,
+        "avg": 5.31,
+        "min": 1.0,
+        "max": 37.0,
+        "p50": 4.5,
+        "p95": 12.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_29": {
+        "count": 1000,
+        "avg": 5.39,
+        "min": 1.0,
+        "max": 37.0,
+        "p50": 4.0,
+        "p95": 12.0,
+        "p99": 19.0
+      },
+      "TemperatureSensors_30": {
+        "count": 1000,
+        "avg": 5.46,
+        "min": 1.0,
+        "max": 37.0,
+        "p50": 5.0,
+        "p95": 12.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_31": {
+        "count": 1000,
+        "avg": 5.52,
+        "min": 2.0,
+        "max": 37.0,
+        "p50": 5.0,
+        "p95": 12.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_32": {
+        "count": 1000,
+        "avg": 5.62,
+        "min": 2.0,
+        "max": 37.0,
+        "p50": 5.0,
+        "p95": 13.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_33": {
+        "count": 1000,
+        "avg": 5.71,
+        "min": 2.0,
+        "max": 37.0,
+        "p50": 5.0,
+        "p95": 13.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_34": {
+        "count": 1000,
+        "avg": 5.79,
+        "min": 2.0,
+        "max": 37.0,
+        "p50": 5.0,
+        "p95": 13.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_35": {
+        "count": 1000,
+        "avg": 5.88,
+        "min": 2.0,
+        "max": 37.0,
+        "p50": 5.0,
+        "p95": 13.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_36": {
+        "count": 1000,
+        "avg": 5.93,
+        "min": 2.0,
+        "max": 38.0,
+        "p50": 5.0,
+        "p95": 13.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_37": {
+        "count": 1000,
+        "avg": 6.08,
+        "min": 2.0,
+        "max": 38.0,
+        "p50": 5.0,
+        "p95": 13.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_38": {
+        "count": 1000,
+        "avg": 6.29,
+        "min": 2.0,
+        "max": 37.0,
+        "p50": 5.0,
+        "p95": 14.0,
+        "p99": 20.0
+      },
+      "TemperatureSensors_39": {
+        "count": 1000,
+        "avg": 6.93,
+        "min": 2.0,
+        "max": 37.0,
+        "p50": 6.0,
+        "p95": 18.0,
+        "p99": 21.0
+      },
+      "TemperatureSensors_40": {
+        "count": 1000,
+        "avg": 7.19,
+        "min": 2.0,
+        "max": 37.0,
+        "p50": 6.0,
+        "p95": 19.0,
+        "p99": 22.0
+      },
+      "TemperatureSensors_41": {
+        "count": 1000,
+        "avg": 8.78,
+        "min": 2.0,
+        "max": 40.0,
+        "p50": 7.0,
+        "p95": 21.0,
+        "p99": 30.0
+      },
+      "TemperatureSensors_42": {
+        "count": 1000,
+        "avg": 2.62,
+        "min": 0.0,
+        "max": 17.0,
+        "p50": 2.0,
+        "p95": 8.0,
+        "p99": 10.0
+      },
+      "TemperatureSensors_43": {
+        "count": 1000,
+        "avg": 3.71,
+        "min": 0.0,
+        "max": 21.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_44": {
+        "count": 1000,
+        "avg": 4.61,
+        "min": 0.0,
+        "max": 21.0,
+        "p50": 4.0,
+        "p95": 11.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_45": {
+        "count": 1000,
+        "avg": 4.97,
+        "min": 0.0,
+        "max": 21.0,
+        "p50": 4.0,
+        "p95": 11.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_46": {
+        "count": 1000,
+        "avg": 5.15,
+        "min": 0.0,
+        "max": 21.0,
+        "p50": 4.0,
+        "p95": 11.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_47": {
+        "count": 1000,
+        "avg": 5.42,
+        "min": 1.0,
+        "max": 21.0,
+        "p50": 5.0,
+        "p95": 11.0,
+        "p99": 14.0
+      },
+      "TemperatureSensors_48": {
+        "count": 1000,
+        "avg": 2.8,
+        "min": 0.0,
+        "max": 17.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 11.0
+      },
+      "TemperatureSensors_49": {
+        "count": 1000,
+        "avg": 3.48,
+        "min": 0.0,
+        "max": 17.0,
+        "p50": 2.0,
+        "p95": 13.0,
+        "p99": 16.0
+      },
+      "TemperatureSensors_50": {
+        "count": 1000,
+        "avg": 4.76,
+        "min": 0.0,
+        "max": 17.0,
+        "p50": 4.0,
+        "p95": 13.0,
+        "p99": 16.0
+      },
+      "PressureSensors_33": {
+        "count": 1000,
+        "avg": 5.58,
+        "min": 0.0,
+        "max": 20.0,
+        "p50": 2.0,
+        "p95": 18.0,
+        "p99": 19.0
+      },
+      "PressureSensors_34": {
+        "count": 1000,
+        "avg": 7.09,
+        "min": 0.0,
+        "max": 26.0,
+        "p50": 5.0,
+        "p95": 18.0,
+        "p99": 24.0
+      },
+      "PressureSensors_35": {
+        "count": 1000,
+        "avg": 8.75,
+        "min": 0.0,
+        "max": 26.0,
+        "p50": 7.0,
+        "p95": 19.0,
+        "p99": 25.0
+      },
+      "PressureSensors_36": {
+        "count": 1000,
+        "avg": 4.21,
+        "min": 0.0,
+        "max": 20.0,
+        "p50": 3.0,
+        "p95": 12.0,
+        "p99": 16.0
+      },
+      "PressureSensors_37": {
+        "count": 1000,
+        "avg": 3.25,
+        "min": 0.0,
+        "max": 17.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 14.0
+      },
+      "PressureSensors_38": {
+        "count": 1000,
+        "avg": 3.02,
+        "min": 0.0,
+        "max": 17.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 14.0
+      },
+      "PressureSensors_39": {
+        "count": 1000,
+        "avg": 3.15,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 14.0
+      },
+      "PressureSensors_40": {
+        "count": 1000,
+        "avg": 3.14,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 15.0
+      },
+      "PressureSensors_41": {
+        "count": 1000,
+        "avg": 3.25,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 15.0
+      },
+      "PressureSensors_42": {
+        "count": 1000,
+        "avg": 3.65,
+        "min": 1.0,
+        "max": 17.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "PressureSensors_43": {
+        "count": 1000,
+        "avg": 3.86,
+        "min": 1.0,
+        "max": 18.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "PressureSensors_44": {
+        "count": 1000,
+        "avg": 4.15,
+        "min": 1.0,
+        "max": 18.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "PressureSensors_45": {
+        "count": 1000,
+        "avg": 3.97,
+        "min": 0.0,
+        "max": 18.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 15.0
+      },
+      "PressureSensors_46": {
+        "count": 1000,
+        "avg": 3.05,
+        "min": 1.0,
+        "max": 18.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 15.0
+      },
+      "PressureSensors_47": {
+        "count": 1000,
+        "avg": 3.08,
+        "min": 1.0,
+        "max": 18.0,
+        "p50": 2.0,
+        "p95": 8.0,
+        "p99": 15.0
+      },
+      "PressureSensors_48": {
+        "count": 1000,
+        "avg": 3.18,
+        "min": 1.0,
+        "max": 18.0,
+        "p50": 2.0,
+        "p95": 8.0,
+        "p99": 15.0
+      },
+      "PressureSensors_49": {
+        "count": 1000,
+        "avg": 3.46,
+        "min": 1.0,
+        "max": 18.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 15.0
+      },
+      "PressureSensors_50": {
+        "count": 1000,
+        "avg": 3.61,
+        "min": 0.0,
+        "max": 23.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 15.0
+      },
+      "PressureSensors_9": {
+        "count": 1000,
+        "avg": 3.2,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 13.0
+      },
+      "PressureSensors_1": {
+        "count": 1000,
+        "avg": 6.19,
+        "min": 0.0,
+        "max": 30.0,
+        "p50": 5.0,
+        "p95": 12.0,
+        "p99": 16.0
+      },
+      "PressureSensors_2": {
+        "count": 1000,
+        "avg": 4.14,
+        "min": 0.0,
+        "max": 12.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 12.0
+      },
+      "PressureSensors_3": {
+        "count": 1000,
+        "avg": 5.11,
+        "min": 1.0,
+        "max": 15.0,
+        "p50": 4.0,
+        "p95": 11.0,
+        "p99": 12.01
+      },
+      "PressureSensors_4": {
+        "count": 1000,
+        "avg": 3.48,
+        "min": 1.0,
+        "max": 13.0,
+        "p50": 3.0,
+        "p95": 7.0,
+        "p99": 10.0
+      },
+      "PressureSensors_5": {
+        "count": 1000,
+        "avg": 3.58,
+        "min": 1.0,
+        "max": 13.0,
+        "p50": 3.0,
+        "p95": 7.0,
+        "p99": 10.0
+      },
+      "PressureSensors_6": {
+        "count": 1000,
+        "avg": 3.67,
+        "min": 1.0,
+        "max": 13.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 11.0
+      },
+      "PressureSensors_7": {
+        "count": 1000,
+        "avg": 3.72,
+        "min": 1.0,
+        "max": 13.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 11.0
+      },
+      "PressureSensors_8": {
+        "count": 1000,
+        "avg": 4.01,
+        "min": 1.0,
+        "max": 22.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "PressureSensors_10": {
+        "count": 1000,
+        "avg": 4.2,
+        "min": 1.0,
+        "max": 22.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 15.0
+      },
+      "PressureSensors_11": {
+        "count": 1000,
+        "avg": 4.29,
+        "min": 1.0,
+        "max": 23.0,
+        "p50": 4.0,
+        "p95": 8.0,
+        "p99": 15.0
+      },
+      "PressureSensors_12": {
+        "count": 1000,
+        "avg": 4.41,
+        "min": 1.0,
+        "max": 23.0,
+        "p50": 4.0,
+        "p95": 8.0,
+        "p99": 15.0
+      },
+      "PressureSensors_13": {
+        "count": 1000,
+        "avg": 4.52,
+        "min": 1.0,
+        "max": 23.0,
+        "p50": 4.0,
+        "p95": 9.0,
+        "p99": 15.0
+      },
+      "PressureSensors_14": {
+        "count": 1000,
+        "avg": 4.6,
+        "min": 1.0,
+        "max": 23.0,
+        "p50": 4.0,
+        "p95": 9.0,
+        "p99": 15.0
+      },
+      "PressureSensors_15": {
+        "count": 1000,
+        "avg": 4.7,
+        "min": 1.0,
+        "max": 23.0,
+        "p50": 4.0,
+        "p95": 9.0,
+        "p99": 15.0
+      },
+      "PressureSensors_16": {
+        "count": 1000,
+        "avg": 4.8,
+        "min": 1.0,
+        "max": 23.0,
+        "p50": 4.0,
+        "p95": 9.0,
+        "p99": 16.0
+      },
+      "PressureSensors_17": {
+        "count": 1000,
+        "avg": 4.99,
+        "min": 2.0,
+        "max": 24.0,
+        "p50": 4.0,
+        "p95": 9.0,
+        "p99": 16.0
+      },
+      "PressureSensors_18": {
+        "count": 1000,
+        "avg": 5.08,
+        "min": 2.0,
+        "max": 24.0,
+        "p50": 4.0,
+        "p95": 9.05,
+        "p99": 16.0
+      },
+      "PressureSensors_19": {
+        "count": 1000,
+        "avg": 5.22,
+        "min": 2.0,
+        "max": 24.0,
+        "p50": 4.0,
+        "p95": 10.0,
+        "p99": 16.01
+      },
+      "PressureSensors_20": {
+        "count": 1000,
+        "avg": 5.33,
+        "min": 2.0,
+        "max": 24.0,
+        "p50": 5.0,
+        "p95": 11.0,
+        "p99": 17.0
+      },
+      "PressureSensors_21": {
+        "count": 1000,
+        "avg": 5.44,
+        "min": 2.0,
+        "max": 24.0,
+        "p50": 5.0,
+        "p95": 10.0,
+        "p99": 17.0
+      },
+      "PressureSensors_22": {
+        "count": 1000,
+        "avg": 5.46,
+        "min": 1.0,
+        "max": 24.0,
+        "p50": 5.0,
+        "p95": 11.0,
+        "p99": 17.0
+      },
+      "PressureSensors_23": {
+        "count": 1000,
+        "avg": 5.62,
+        "min": 1.0,
+        "max": 24.0,
+        "p50": 5.0,
+        "p95": 12.0,
+        "p99": 17.0
+      },
+      "PressureSensors_24": {
+        "count": 1000,
+        "avg": 5.87,
+        "min": 1.0,
+        "max": 24.0,
+        "p50": 5.0,
+        "p95": 13.0,
+        "p99": 21.0
+      },
+      "PressureSensors_25": {
+        "count": 1000,
+        "avg": 6.01,
+        "min": 2.0,
+        "max": 20.0,
+        "p50": 5.0,
+        "p95": 13.0,
+        "p99": 19.0
+      },
+      "PressureSensors_26": {
+        "count": 1000,
+        "avg": 6.74,
+        "min": 2.0,
+        "max": 20.0,
+        "p50": 5.0,
+        "p95": 15.0,
+        "p99": 20.0
+      },
+      "PressureSensors_27": {
+        "count": 1000,
+        "avg": 6.88,
+        "min": 0.0,
+        "max": 23.0,
+        "p50": 5.0,
+        "p95": 18.0,
+        "p99": 22.0
+      },
+      "PressureSensors_28": {
+        "count": 1000,
+        "avg": 7.25,
+        "min": 0.0,
+        "max": 23.0,
+        "p50": 6.0,
+        "p95": 18.0,
+        "p99": 22.0
+      },
+      "PressureSensors_29": {
+        "count": 1000,
+        "avg": 8.31,
+        "min": 1.0,
+        "max": 24.0,
+        "p50": 7.0,
+        "p95": 18.0,
+        "p99": 23.0
+      },
+      "PressureSensors_30": {
+        "count": 1000,
+        "avg": 10.78,
+        "min": 3.0,
+        "max": 29.0,
+        "p50": 10.0,
+        "p95": 20.0,
+        "p99": 25.0
+      },
+      "PressureSensors_31": {
+        "count": 1000,
+        "avg": 3.66,
+        "min": 0.0,
+        "max": 18.0,
+        "p50": 2.0,
+        "p95": 16.0,
+        "p99": 18.0
+      },
+      "PressureSensors_32": {
+        "count": 1000,
+        "avg": 5.39,
+        "min": 0.0,
+        "max": 20.0,
+        "p50": 2.0,
+        "p95": 18.0,
+        "p99": 19.0
+      },
+      "MachineStatus_2": {
+        "count": 812,
+        "avg": 2.72,
+        "min": 0.0,
+        "max": 26.0,
+        "p50": 2.0,
+        "p95": 6.0,
+        "p99": 18.67
+      },
+      "MachineStatus_5": {
+        "count": 810,
+        "avg": 3.0,
+        "min": 1.0,
+        "max": 27.0,
+        "p50": 2.0,
+        "p95": 6.0,
+        "p99": 18.73
+      },
+      "MachineStatus_8": {
+        "count": 810,
+        "avg": 3.17,
+        "min": 1.0,
+        "max": 27.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 20.55
+      },
+      "MachineStatus_11": {
+        "count": 810,
+        "avg": 3.4,
+        "min": 1.0,
+        "max": 27.0,
+        "p50": 3.0,
+        "p95": 7.0,
+        "p99": 20.55
+      },
+      "MachineStatus_14": {
+        "count": 810,
+        "avg": 3.23,
+        "min": 0.0,
+        "max": 26.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 15.82
+      },
+      "MachineStatus_17": {
+        "count": 808,
+        "avg": 3.66,
+        "min": 0.0,
+        "max": 26.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 16.0
+      },
+      "MachineStatus_20": {
+        "count": 810,
+        "avg": 3.38,
+        "min": 1.0,
+        "max": 22.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 15.82
+      },
+      "MachineStatus_23": {
+        "count": 810,
+        "avg": 3.64,
+        "min": 1.0,
+        "max": 22.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 17.0
+      },
+      "MachineStatus_26": {
+        "count": 810,
+        "avg": 3.9,
+        "min": 1.0,
+        "max": 23.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 19.73
+      },
+      "MachineStatus_29": {
+        "count": 810,
+        "avg": 4.14,
+        "min": 1.0,
+        "max": 24.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 19.73
+      },
+      "MachineStatus_3": {
+        "count": 800,
+        "avg": 2.78,
+        "min": 0.0,
+        "max": 26.0,
+        "p50": 2.0,
+        "p95": 6.0,
+        "p99": 19.0
+      },
+      "MachineStatus_6": {
+        "count": 800,
+        "avg": 3.02,
+        "min": 1.0,
+        "max": 27.0,
+        "p50": 2.0,
+        "p95": 6.05,
+        "p99": 20.0
+      },
+      "MachineStatus_9": {
+        "count": 800,
+        "avg": 3.23,
+        "min": 1.0,
+        "max": 27.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 21.0
+      },
+      "MachineStatus_12": {
+        "count": 800,
+        "avg": 3.51,
+        "min": 1.0,
+        "max": 28.0,
+        "p50": 3.0,
+        "p95": 7.0,
+        "p99": 21.0
+      },
+      "MachineStatus_15": {
+        "count": 800,
+        "avg": 3.28,
+        "min": 0.0,
+        "max": 26.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 16.0
+      },
+      "MachineStatus_18": {
+        "count": 800,
+        "avg": 3.11,
+        "min": 0.0,
+        "max": 21.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 16.0
+      },
+      "MachineStatus_21": {
+        "count": 800,
+        "avg": 3.4,
+        "min": 1.0,
+        "max": 22.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 16.0
+      },
+      "MachineStatus_24": {
+        "count": 800,
+        "avg": 3.69,
+        "min": 1.0,
+        "max": 22.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 17.0
+      },
+      "MachineStatus_30": {
+        "count": 800,
+        "avg": 4.25,
+        "min": 1.0,
+        "max": 24.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 20.0
+      },
+      "MachineStatus_27": {
+        "count": 800,
+        "avg": 3.45,
+        "min": 0.0,
+        "max": 25.0,
+        "p50": 3.0,
+        "p95": 8.0,
+        "p99": 19.0
+      },
+      "MachineStatus_1": {
+        "count": 1000,
+        "avg": 2.08,
+        "min": 0.0,
+        "max": 19.0,
+        "p50": 2.0,
+        "p95": 4.0,
+        "p99": 12.06
+      },
+      "MachineStatus_4": {
+        "count": 1000,
+        "avg": 2.43,
+        "min": 1.0,
+        "max": 19.0,
+        "p50": 2.0,
+        "p95": 4.05,
+        "p99": 12.07
+      },
+      "MachineStatus_7": {
+        "count": 1000,
+        "avg": 2.6,
+        "min": 1.0,
+        "max": 21.0,
+        "p50": 2.0,
+        "p95": 4.05,
+        "p99": 10.1
+      },
+      "MachineStatus_10": {
+        "count": 1000,
+        "avg": 2.83,
+        "min": 1.0,
+        "max": 21.0,
+        "p50": 2.0,
+        "p95": 6.0,
+        "p99": 10.11
+      },
+      "MachineStatus_13": {
+        "count": 1000,
+        "avg": 3.15,
+        "min": 1.0,
+        "max": 22.0,
+        "p50": 3.0,
+        "p95": 7.0,
+        "p99": 13.09
+      },
+      "MachineStatus_19": {
+        "count": 1000,
+        "avg": 3.71,
+        "min": 1.0,
+        "max": 22.0,
+        "p50": 3.0,
+        "p95": 9.05,
+        "p99": 21.0
+      },
+      "MachineStatus_22": {
+        "count": 1000,
+        "avg": 3.99,
+        "min": 1.0,
+        "max": 22.0,
+        "p50": 3.0,
+        "p95": 12.05,
+        "p99": 21.01
+      },
+      "MachineStatus_25": {
+        "count": 1000,
+        "avg": 4.44,
+        "min": 1.0,
+        "max": 23.0,
+        "p50": 3.0,
+        "p95": 13.0,
+        "p99": 22.01
+      },
+      "MachineStatus_28": {
+        "count": 1000,
+        "avg": 4.67,
+        "min": 1.0,
+        "max": 23.0,
+        "p50": 3.0,
+        "p95": 14.0,
+        "p99": 23.0
+      },
+      "MachineStatus_16": {
+        "count": 1000,
+        "avg": 3.68,
+        "min": 0.0,
+        "max": 25.0,
+        "p50": 3.0,
+        "p95": 10.0,
+        "p99": 21.04
+      },
+      "QualityInspection_21": {
+        "count": 584,
+        "avg": 2.96,
+        "min": 1.0,
+        "max": 26.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 23.0
+      },
+      "QualityInspection_22": {
+        "count": 584,
+        "avg": 3.08,
+        "min": 1.0,
+        "max": 26.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 24.0
+      },
+      "QualityInspection_23": {
+        "count": 584,
+        "avg": 3.13,
+        "min": 1.0,
+        "max": 25.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 24.0
+      },
+      "QualityInspection_24": {
+        "count": 584,
+        "avg": 3.17,
+        "min": 1.0,
+        "max": 25.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 24.0
+      },
+      "QualityInspection_25": {
+        "count": 584,
+        "avg": 3.23,
+        "min": 1.0,
+        "max": 25.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 24.0
+      },
+      "QualityInspection_26": {
+        "count": 584,
+        "avg": 3.28,
+        "min": 1.0,
+        "max": 25.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 24.0
+      },
+      "QualityInspection_28": {
+        "count": 584,
+        "avg": 3.46,
+        "min": 1.0,
+        "max": 25.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 24.0
+      },
+      "QualityInspection_29": {
+        "count": 584,
+        "avg": 3.58,
+        "min": 1.0,
+        "max": 25.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 24.0
+      },
+      "QualityInspection_30": {
+        "count": 584,
+        "avg": 3.74,
+        "min": 1.0,
+        "max": 25.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 24.0
+      },
+      "QualityInspection_27": {
+        "count": 584,
+        "avg": 3.43,
+        "min": 0.0,
+        "max": 19.0,
+        "p50": 2.0,
+        "p95": 10.0,
+        "p99": 14.0
+      },
+      "QualityInspection_1": {
+        "count": 585,
+        "avg": 4.27,
+        "min": 0.0,
+        "max": 20.0,
+        "p50": 3.0,
+        "p95": 11.0,
+        "p99": 15.0
+      },
+      "QualityInspection_2": {
+        "count": 585,
+        "avg": 3.26,
+        "min": 0.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "QualityInspection_3": {
+        "count": 585,
+        "avg": 3.06,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "QualityInspection_4": {
+        "count": 585,
+        "avg": 3.1,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 7.0,
+        "p99": 14.0
+      },
+      "QualityInspection_5": {
+        "count": 585,
+        "avg": 3.14,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "QualityInspection_6": {
+        "count": 585,
+        "avg": 3.2,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "QualityInspection_7": {
+        "count": 585,
+        "avg": 3.25,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "QualityInspection_8": {
+        "count": 585,
+        "avg": 3.32,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 2.0,
+        "p95": 8.0,
+        "p99": 14.0
+      },
+      "QualityInspection_9": {
+        "count": 585,
+        "avg": 3.41,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 14.0
+      },
+      "QualityInspection_10": {
+        "count": 585,
+        "avg": 3.52,
+        "min": 1.0,
+        "max": 14.0,
+        "p50": 3.0,
+        "p95": 10.0,
+        "p99": 14.0
+      },
+      "QualityInspection_11": {
+        "count": 581,
+        "avg": 3.44,
+        "min": 0.0,
+        "max": 14.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 14.0
+      },
+      "QualityInspection_12": {
+        "count": 581,
+        "avg": 3.52,
+        "min": 0.0,
+        "max": 15.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 14.0
+      },
+      "QualityInspection_13": {
+        "count": 581,
+        "avg": 3.65,
+        "min": 0.0,
+        "max": 15.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 14.0
+      },
+      "QualityInspection_14": {
+        "count": 581,
+        "avg": 3.61,
+        "min": 0.0,
+        "max": 15.0,
+        "p50": 3.0,
+        "p95": 9.0,
+        "p99": 14.0
+      },
+      "QualityInspection_15": {
+        "count": 581,
+        "avg": 3.76,
+        "min": 0.0,
+        "max": 15.0,
+        "p50": 3.0,
+        "p95": 10.0,
+        "p99": 14.2
+      },
+      "QualityInspection_16": {
+        "count": 581,
+        "avg": 3.87,
+        "min": 0.0,
+        "max": 15.0,
+        "p50": 3.0,
+        "p95": 10.0,
+        "p99": 15.0
+      },
+      "QualityInspection_17": {
+        "count": 581,
+        "avg": 4.07,
+        "min": 0.0,
+        "max": 18.0,
+        "p50": 3.0,
+        "p95": 10.0,
+        "p99": 15.0
+      },
+      "QualityInspection_18": {
+        "count": 581,
+        "avg": 4.7,
+        "min": 1.0,
+        "max": 18.0,
+        "p50": 3.0,
+        "p95": 12.0,
+        "p99": 15.0
+      },
+      "QualityInspection_19": {
+        "count": 581,
+        "avg": 2.77,
+        "min": 0.0,
+        "max": 25.0,
+        "p50": 1.0,
+        "p95": 9.0,
+        "p99": 23.0
+      },
+      "QualityInspection_20": {
+        "count": 581,
+        "avg": 2.98,
+        "min": 1.0,
+        "max": 26.0,
+        "p50": 2.0,
+        "p95": 9.0,
+        "p99": 23.0
+      }
+    },
+    "by_topic": {
+      "edge/sensor/vibration": {
+        "count": 1000,
+        "avg": 3.28,
+        "p50": 3.0,
+        "p95": 5.0
+      },
+      "edge/sensor/temperature": {
+        "count": 1000,
+        "avg": 6.01,
+        "p50": 5.0,
+        "p95": 13.0
+      },
+      "edge/sensor/pressure": {
+        "count": 1000,
+        "avg": 4.01,
+        "p50": 3.0,
+        "p95": 10.0
+      },
+      "edge/machine/speed": {
+        "count": 1000,
+        "avg": 2.91,
+        "p50": 2.0,
+        "p95": 8.0
+      },
+      "edge/machine/power": {
+        "count": 1000,
+        "avg": 2.67,
+        "p50": 2.0,
+        "p95": 6.0
+      },
+      "edge/machine/status": {
+        "count": 1000,
+        "avg": 2.49,
+        "p50": 2.0,
+        "p95": 5.0
+      },
+      "edge/quality/inspection": {
+        "count": 1000,
+        "avg": 3.44,
+        "p50": 3.0,
+        "p95": 7.0
+      }
+    },
+    "by_subscriber": {
+      "MaintenanceAlerts_2": {
+        "count": 1000,
+        "avg": 2.79
+      },
+      "MaintenanceAlerts_1": {
+        "count": 1000,
+        "avg": 2.85
+      },
+      "EdgeAnalytics_1": {
+        "count": 1000,
+        "avg": 2.79
+      },
+      "MaintenanceAlerts_4": {
+        "count": 1000,
+        "avg": 2.87
+      },
+      "CloudForwarder_1": {
+        "count": 1000,
+        "avg": 4.55
+      },
+      "EdgeAnalytics_3": {
+        "count": 1000,
+        "avg": 2.82
+      },
+      "MaintenanceAlerts_5": {
+        "count": 1000,
+        "avg": 2.89
+      },
+      "CloudForwarder_2": {
+        "count": 1000,
+        "avg": 4.57
+      },
+      "MaintenanceAlerts_3": {
+        "count": 1000,
+        "avg": 2.86
+      },
+      "EdgeAnalytics_2": {
+        "count": 1000,
+        "avg": 2.8
+      },
+      "LocalHMI_1": {
+        "count": 1000,
+        "avg": 4.68
+      },
+      "LocalHMI_5": {
+        "count": 1000,
+        "avg": 4.73
+      },
+      "LocalHMI_2": {
+        "count": 1000,
+        "avg": 4.7
+      },
+      "LocalHMI_4": {
+        "count": 1000,
+        "avg": 4.72
+      },
+      "LocalHMI_3": {
+        "count": 1000,
+        "avg": 4.71
+      },
+      "QualityDashboard_1": {
+        "count": 1000,
+        "avg": 4.19
+      },
+      "QualityDashboard_2": {
+        "count": 1000,
+        "avg": 4.21
+      },
+      "QualityDashboard_3": {
+        "count": 1000,
+        "avg": 4.23
+      },
+      "QualityDashboard_5": {
+        "count": 1000,
+        "avg": 4.25
+      },
+      "QualityDashboard_4": {
+        "count": 1000,
+        "avg": 4.24
+      }
+    }
+  },
+  "throughput_delay_message_count": 6000,
+  "throughput_delay_throughput_mps": 15694.1,
+  "throughput_unique_publisher_messages": 91801,
+  "throughput_publisher_throughput_mps": 1638.21,
+  "throughput_duration": 3.66,
+  "throughput_subscriber_multiplication_factor": 0.07,
+  "throughput_start_time": 1767184688.431231,
+  "throughput_end_time": 1767184750.5817802,
+  "availability_total_checks": 30,
+  "availability_failures": 0,
+  "availability_recoveries": 0,
+  "availability_downtime_events": 0,
+  "availability_avg_downtime_sec": 0.0,
+  "availability_mtbf_sec": 0.0,
+  "availability_mttr_sec": 0.0
+}

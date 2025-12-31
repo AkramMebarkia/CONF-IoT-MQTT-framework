@@ -1,0 +1,174 @@
+{
+    "scenario_name": "High Fan-Out SCADA Pattern",
+    "scenario_id": "S3_FanOut",
+    "description": "SCADA system with many subscribers per topic - tests internal routing and fan-out efficiency",
+    "topics": [
+        "scada/zone1/plc",
+        "scada/zone2/plc",
+        "scada/zone3/plc",
+        "scada/zone4/plc",
+        "scada/zone5/plc",
+        "scada/master/command",
+        "scada/master/status",
+        "scada/alarm/zone1",
+        "scada/alarm/zone2",
+        "scada/alarm/master"
+    ],
+    "publisher_groups": [
+        {
+            "group_name": "Zone1_PLCs",
+            "count": 10,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone1/plc"
+            ]
+        },
+        {
+            "group_name": "Zone2_PLCs",
+            "count": 10,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone2/plc"
+            ]
+        },
+        {
+            "group_name": "Zone3_PLCs",
+            "count": 10,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone3/plc"
+            ]
+        },
+        {
+            "group_name": "Zone4_PLCs",
+            "count": 10,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone4/plc"
+            ]
+        },
+        {
+            "group_name": "Zone5_PLCs",
+            "count": 10,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone5/plc"
+            ]
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "group_name": "Zone1_HMIs",
+            "count": 20,
+            "qos": 1,
+            "topics": [
+                "scada/zone1/plc",
+                "scada/master/status",
+                "scada/alarm/zone1"
+            ]
+        },
+        {
+            "group_name": "Zone2_HMIs",
+            "count": 20,
+            "qos": 1,
+            "topics": [
+                "scada/zone2/plc",
+                "scada/master/status",
+                "scada/alarm/zone2"
+            ]
+        },
+        {
+            "group_name": "Zone3_HMIs",
+            "count": 20,
+            "qos": 1,
+            "topics": [
+                "scada/zone3/plc",
+                "scada/master/status"
+            ]
+        },
+        {
+            "group_name": "Zone4_HMIs",
+            "count": 20,
+            "qos": 1,
+            "topics": [
+                "scada/zone4/plc",
+                "scada/master/status"
+            ]
+        },
+        {
+            "group_name": "Zone5_HMIs",
+            "count": 20,
+            "qos": 1,
+            "topics": [
+                "scada/zone5/plc",
+                "scada/master/status"
+            ]
+        },
+        {
+            "group_name": "CentralSCADA",
+            "count": 50,
+            "qos": 1,
+            "topics": [
+                "scada/zone1/plc",
+                "scada/zone2/plc",
+                "scada/zone3/plc",
+                "scada/zone4/plc",
+                "scada/zone5/plc",
+                "scada/master/status"
+            ]
+        },
+        {
+            "group_name": "AlarmManagement",
+            "count": 30,
+            "qos": 1,
+            "topics": [
+                "scada/alarm/zone1",
+                "scada/alarm/zone2",
+                "scada/alarm/master"
+            ]
+        },
+        {
+            "group_name": "Historian",
+            "count": 20,
+            "qos": 1,
+            "topics": [
+                "scada/zone1/plc",
+                "scada/zone2/plc",
+                "scada/zone3/plc",
+                "scada/zone4/plc",
+                "scada/zone5/plc"
+            ]
+        }
+    ],
+    "evaluation": {
+        "duration": 120,
+        "warmup": 10
+    },
+    "expected_metrics": {
+        "total_publishers": 50,
+        "total_subscribers": 200,
+        "fanout_ratio": "1:40",
+        "input_throughput": 1000,
+        "delivery_throughput": 40000,
+        "primary_metrics": [
+            "subscriber_fairness",
+            "fanout_efficiency",
+            "network_io"
+        ]
+    }
+}

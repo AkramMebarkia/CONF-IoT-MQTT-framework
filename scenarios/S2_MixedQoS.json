@@ -1,0 +1,180 @@
+{
+    "scenario_name": "Mixed QoS Critical and Telemetry",
+    "scenario_id": "S2_MixedQoS",
+    "description": "Combined monitoring (QoS 0) and alerting (QoS 2) system - tests QoS handling",
+    "topics": [
+        "telemetry/sensor1",
+        "telemetry/sensor2",
+        "telemetry/sensor3",
+        "telemetry/sensor4",
+        "telemetry/sensor5",
+        "critical/fire_alarm",
+        "critical/gas_detector",
+        "critical/emergency_stop",
+        "critical/equipment_fault",
+        "critical/safety_interlock"
+    ],
+    "publisher_groups": [
+        {
+            "group_name": "TelemetrySensors_Group1",
+            "count": 50,
+            "frequency": 0.1,
+            "payload_size": 256,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "telemetry/sensor1",
+                "telemetry/sensor2"
+            ]
+        },
+        {
+            "group_name": "TelemetrySensors_Group2",
+            "count": 50,
+            "frequency": 0.1,
+            "payload_size": 256,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "telemetry/sensor3",
+                "telemetry/sensor4"
+            ]
+        },
+        {
+            "group_name": "TelemetrySensors_Group3",
+            "count": 50,
+            "frequency": 0.1,
+            "payload_size": 256,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "telemetry/sensor5"
+            ]
+        },
+        {
+            "group_name": "FireAlarms",
+            "count": 10,
+            "frequency": 1,
+            "payload_size": 512,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "critical/fire_alarm"
+            ]
+        },
+        {
+            "group_name": "GasDetectors",
+            "count": 10,
+            "frequency": 1,
+            "payload_size": 512,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "critical/gas_detector"
+            ]
+        },
+        {
+            "group_name": "SafetySystems",
+            "count": 15,
+            "frequency": 1,
+            "payload_size": 512,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "critical/emergency_stop",
+                "critical/safety_interlock"
+            ]
+        },
+        {
+            "group_name": "EquipmentFaults",
+            "count": 15,
+            "frequency": 1,
+            "payload_size": 512,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "critical/equipment_fault"
+            ]
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "group_name": "TelemetryDashboard",
+            "count": 5,
+            "qos": 0,
+            "topics": [
+                "telemetry/sensor1",
+                "telemetry/sensor2",
+                "telemetry/sensor3",
+                "telemetry/sensor4",
+                "telemetry/sensor5"
+            ]
+        },
+        {
+            "group_name": "ControlRoom_Critical",
+            "count": 5,
+            "qos": 2,
+            "topics": [
+                "critical/fire_alarm",
+                "critical/gas_detector",
+                "critical/emergency_stop"
+            ]
+        },
+        {
+            "group_name": "SafetyPLC",
+            "count": 5,
+            "qos": 2,
+            "topics": [
+                "critical/emergency_stop",
+                "critical/safety_interlock"
+            ]
+        },
+        {
+            "group_name": "MaintenanceSystem",
+            "count": 5,
+            "qos": 2,
+            "topics": [
+                "critical/equipment_fault"
+            ]
+        },
+        {
+            "group_name": "ComplianceLogger",
+            "count": 5,
+            "qos": 2,
+            "topics": [
+                "critical/fire_alarm",
+                "critical/gas_detector",
+                "critical/emergency_stop",
+                "critical/equipment_fault",
+                "critical/safety_interlock"
+            ]
+        },
+        {
+            "group_name": "CloudBackup",
+            "count": 5,
+            "qos": 1,
+            "topics": [
+                "telemetry/sensor1",
+                "telemetry/sensor2",
+                "critical/fire_alarm",
+                "critical/gas_detector"
+            ]
+        }
+    ],
+    "evaluation": {
+        "duration": 180,
+        "warmup": 10
+    },
+    "expected_metrics": {
+        "total_publishers": 200,
+        "qos0_publishers": 150,
+        "qos2_publishers": 50,
+        "total_subscribers": 30,
+        "expected_qos0_throughput": 1500,
+        "expected_qos2_throughput": 50,
+        "primary_metrics": [
+            "qos2_completion_time",
+            "qos0_latency_under_qos2_load",
+            "message_ordering"
+        ]
+    }
+}

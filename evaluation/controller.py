@@ -15,10 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class EvaluationController:
-    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results", delay_queue=None):
+    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results", delay_queue=None, warmup_seconds=10):
         self.broker_host = broker_host
         self.broker_port = broker_port
         self.duration = duration
+        self.warmup_seconds = warmup_seconds
         self.job_id = job_id or uuid.uuid4().hex
         self.output_dir = output_dir
         self.connected = False
@@ -100,8 +101,30 @@ class EvaluationController:
             if not self.connected:
                 raise Exception("Failed to establish MQTT connection within timeout")
                 
-            logger.info("Ready to collect data for %d seconds", self.duration)
-            time.sleep(5)
+            logger.info("Ready to collect data for %d seconds (after %ds warm-up)", self.duration, self.warmup_seconds)
+            
+            # Warm-up period - let things stabilize
+            if self.warmup_seconds > 0:
+                logger.info("Warm-up period: %d seconds (data will be discarded)", self.warmup_seconds)
+                time.sleep(self.warmup_seconds)
+                
+                # Clear any data collected during warm-up
+                if self.delay_queue:
+                    discarded = 0
+                    while True:
+                        try:
+                            self.delay_queue.popleft()
+                            discarded += 1
+                        except IndexError:
+                            break
+                    if discarded > 0:
+                        logger.info("Discarded %d warm-up samples", discarded)
+                
+                # Reset trackers for fresh start
+                self.latency_tracker.reset()
+                self.throughput_tracker.reset()
+                self.message_count = 0
+                logger.info("Warm-up complete, starting measurement")
             
         except Exception as e:
             logger.error("MQTT setup failed: %s", e)

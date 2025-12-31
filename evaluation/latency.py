@@ -12,19 +12,21 @@ class EnhancedLatencyTracker:
     """
 
     def __init__(self):
-        self.delays = deque()  # All delay values
-        self.timestamps = deque()  # Timestamps for each measurement
+        self.delays = deque()
+        self.timestamps = deque()
         self.processed_count = 0
         self.error_count = 0
+        self.duplicate_count = 0
 
-        # Track by different dimensions for stratified analysis
-        self.publisher_delays = defaultdict(deque)  # Delays per publisher
-        self.topic_delays = defaultdict(deque)  # Delays per topic
-        self.subscriber_delays = defaultdict(deque)  # Delays per subscriber
+        self.publisher_delays = defaultdict(deque)
+        self.topic_delays = defaultdict(deque)
+        self.subscriber_delays = defaultdict(deque)
         
-        # Track unique messages
-        self.unique_messages = set()  # (publisher_name, seq_id) tuples
+        self.unique_messages = set()
         self.publisher_message_count = defaultdict(int)
+        
+        # QoS 2 deduplication: track (publisher, seq_id, subscriber) to detect retries
+        self.seen_deliveries = set()
         
         self.last_update = time.time()
 
@@ -38,10 +40,21 @@ class EnhancedLatencyTracker:
                 self.error_count += 1
                 return
 
+            # QoS 2 deduplication check
+            publisher = record.get("publisher_name", "unknown")
+            seq_id = record.get("seq_id")
+            subscriber = record.get("subscriber", "unknown")
+            
+            if seq_id is not None:
+                delivery_key = (publisher, seq_id, subscriber)
+                if delivery_key in self.seen_deliveries:
+                    self.duplicate_count += 1
+                    return
+                self.seen_deliveries.add(delivery_key)
+
             self.processed_count += 1
             delay = float(delay)
             
-            # Sanity check
             if delay < 0 or delay > 60000:
                 self.error_count += 1
                 return
@@ -84,6 +97,22 @@ class EnhancedLatencyTracker:
         except Exception as e:
             self.error_count += 1
             logger.error("Error processing latency record: %s", e)
+
+    def reset(self):
+        """Reset all collected data for fresh start after warm-up"""
+        self.delays.clear()
+        self.timestamps.clear()
+        self.processed_count = 0
+        self.error_count = 0
+        self.duplicate_count = 0
+        self.publisher_delays.clear()
+        self.topic_delays.clear()
+        self.subscriber_delays.clear()
+        self.unique_messages.clear()
+        self.publisher_message_count.clear()
+        self.seen_deliveries.clear()
+        self.last_update = time.time()
+        logger.info("Latency tracker reset")
 
     def _calculate_percentiles(self, delays_list):
         """Calculate P50, P95, P99 percentiles with proper interpolation"""

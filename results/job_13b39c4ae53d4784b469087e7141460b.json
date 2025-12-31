@@ -1,0 +1,290 @@
+{
+  "job_id": "13b39c4ae53d4784b469087e7141460b",
+  "broker_name": "localhost",
+  "timestamp": "2025-12-31T09:58:55.905341",
+  "latency_count": 11400,
+  "latency_processed_count": 11400,
+  "latency_error_count": 0,
+  "latency_error_rate": 0.0,
+  "latency_unique_publisher_messages": 1300,
+  "latency_avg_delay": 2.1,
+  "latency_min_delay": 0.0,
+  "latency_max_delay": 56.0,
+  "latency_jitter": 3.1,
+  "latency_p50": 2.0,
+  "latency_p95": 5.0,
+  "latency_p99": 8.0,
+  "latency_publisher_breakdown": {
+    "ZoneX_Publishers_3": 34,
+    "ZoneX_Publishers_6": 34,
+    "ZoneX_Publishers_9": 34,
+    "rr_1": 66,
+    "rr_2": 66,
+    "rr_3": 66,
+    "ZoneX_Publishers_7": 29,
+    "ZoneX_Publishers_10": 29,
+    "OccasionalXL_1": 286,
+    "ZoneX_Publishers_1": 28,
+    "ZoneX_Publishers_4": 28,
+    "OccasionalXL_2": 307,
+    "ZoneX_Publishers_2": 31,
+    "ZoneX_Publishers_5": 31,
+    "ZoneX_Publishers_8": 31,
+    "AlertSystem_1": 100,
+    "AlertSystem_2": 100
+  },
+  "latency_stratified_stats": {
+    "by_publisher": {
+      "ZoneX_Publishers_3": {
+        "count": 340,
+        "avg": 1.93,
+        "min": 0.0,
+        "max": 6.0,
+        "p50": 1.0,
+        "p95": 5.0,
+        "p99": 5.0
+      },
+      "ZoneX_Publishers_6": {
+        "count": 340,
+        "avg": 2.74,
+        "min": 0.0,
+        "max": 11.0,
+        "p50": 2.0,
+        "p95": 6.0,
+        "p99": 10.0
+      },
+      "ZoneX_Publishers_9": {
+        "count": 340,
+        "avg": 1.23,
+        "min": 0.0,
+        "max": 3.0,
+        "p50": 1.0,
+        "p95": 2.0,
+        "p99": 3.0
+      },
+      "rr_1": {
+        "count": 660,
+        "avg": 1.31,
+        "min": 0.0,
+        "max": 5.0,
+        "p50": 1.0,
+        "p95": 3.0,
+        "p99": 5.0
+      },
+      "rr_2": {
+        "count": 660,
+        "avg": 1.67,
+        "min": 0.0,
+        "max": 5.0,
+        "p50": 2.0,
+        "p95": 3.0,
+        "p99": 5.0
+      },
+      "rr_3": {
+        "count": 660,
+        "avg": 3.59,
+        "min": 1.0,
+        "max": 40.0,
+        "p50": 2.0,
+        "p95": 17.0,
+        "p99": 39.0
+      },
+      "ZoneX_Publishers_7": {
+        "count": 290,
+        "avg": 0.92,
+        "min": 0.0,
+        "max": 3.0,
+        "p50": 1.0,
+        "p95": 2.0,
+        "p99": 3.0
+      },
+      "ZoneX_Publishers_10": {
+        "count": 290,
+        "avg": 1.68,
+        "min": 1.0,
+        "max": 5.0,
+        "p50": 2.0,
+        "p95": 3.0,
+        "p99": 4.0
+      },
+      "OccasionalXL_1": {
+        "count": 1000,
+        "avg": 1.74,
+        "min": 0.0,
+        "max": 7.0,
+        "p50": 1.0,
+        "p95": 4.0,
+        "p99": 6.0
+      },
+      "ZoneX_Publishers_1": {
+        "count": 280,
+        "avg": 1.93,
+        "min": 0.0,
+        "max": 6.0,
+        "p50": 1.0,
+        "p95": 5.0,
+        "p99": 5.0
+      },
+      "ZoneX_Publishers_4": {
+        "count": 280,
+        "avg": 2.6,
+        "min": 1.0,
+        "max": 5.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 5.0
+      },
+      "OccasionalXL_2": {
+        "count": 1000,
+        "avg": 2.07,
+        "min": 0.0,
+        "max": 11.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 6.0
+      },
+      "ZoneX_Publishers_2": {
+        "count": 310,
+        "avg": 2.18,
+        "min": 0.0,
+        "max": 5.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 5.0
+      },
+      "ZoneX_Publishers_5": {
+        "count": 310,
+        "avg": 3.02,
+        "min": 1.0,
+        "max": 10.0,
+        "p50": 2.0,
+        "p95": 5.0,
+        "p99": 9.0
+      },
+      "ZoneX_Publishers_8": {
+        "count": 310,
+        "avg": 1.33,
+        "min": 0.0,
+        "max": 4.0,
+        "p50": 1.0,
+        "p95": 2.0,
+        "p99": 3.0
+      },
+      "AlertSystem_1": {
+        "count": 200,
+        "avg": 4.38,
+        "min": 0.0,
+        "max": 56.0,
+        "p50": 1.0,
+        "p95": 26.0,
+        "p99": 53.03
+      },
+      "AlertSystem_2": {
+        "count": 200,
+        "avg": 5.39,
+        "min": 0.0,
+        "max": 56.0,
+        "p50": 2.0,
+        "p95": 46.0,
+        "p99": 53.03
+      }
+    },
+    "by_topic": {
+      "ZoneX_Topic3": {
+        "count": 1000,
+        "avg": 2.35,
+        "p50": 1.0,
+        "p95": 5.0
+      },
+      "ZoneX_Topic1": {
+        "count": 1000,
+        "avg": 1.58,
+        "p50": 1.0,
+        "p95": 3.0
+      },
+      "ZoneX_Topic2": {
+        "count": 1000,
+        "avg": 1.95,
+        "p50": 2.0,
+        "p95": 4.0
+      },
+      "alerts/fire": {
+        "count": 200,
+        "avg": 4.38,
+        "p50": 1.0,
+        "p95": 26.0
+      },
+      "alerts/intrusion": {
+        "count": 200,
+        "avg": 5.39,
+        "p50": 2.0,
+        "p95": 46.0
+      }
+    },
+    "by_subscriber": {
+      "ZoneX_Clients_2": {
+        "count": 1000,
+        "avg": 1.9
+      },
+      "ZoneX_Clients_1": {
+        "count": 1000,
+        "avg": 1.87
+      },
+      "ZoneX_Clients_3": {
+        "count": 1000,
+        "avg": 1.93
+      },
+      "ZoneX_Clients_4": {
+        "count": 1000,
+        "avg": 1.95
+      },
+      "asas_2": {
+        "count": 1000,
+        "avg": 2.0
+      },
+      "asas_1": {
+        "count": 1000,
+        "avg": 2.02
+      },
+      "asas_3": {
+        "count": 1000,
+        "avg": 2.07
+      },
+      "ZoneX_Clients_6": {
+        "count": 1000,
+        "avg": 2.0
+      },
+      "ZoneX_Clients_5": {
+        "count": 1000,
+        "avg": 1.97
+      },
+      "asas_4": {
+        "count": 1000,
+        "avg": 2.1
+      },
+      "SecurityTerminals_2": {
+        "count": 200,
+        "avg": 4.91
+      },
+      "SecurityTerminals_1": {
+        "count": 200,
+        "avg": 4.87
+      }
+    }
+  },
+  "throughput_delay_message_count": 6000,
+  "throughput_delay_throughput_mps": 199.77,
+  "throughput_unique_publisher_messages": 1300,
+  "throughput_publisher_throughput_mps": 24.04,
+  "throughput_duration": 54.07,
+  "throughput_subscriber_multiplication_factor": 4.62,
+  "throughput_start_time": 1767175077.3707697,
+  "throughput_end_time": 1767175135.904783,
+  "availability_total_checks": 30,
+  "availability_failures": 0,
+  "availability_recoveries": 0,
+  "availability_downtime_events": 0,
+  "availability_avg_downtime_sec": 0.0,
+  "availability_mtbf_sec": 0.0,
+  "availability_mttr_sec": 0.0
+}
