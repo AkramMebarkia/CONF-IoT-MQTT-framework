@@ -1,0 +1,53 @@
+{
+    "brokers": [
+        {
+            "name": "mosquitto",
+            "display_name": "Eclipse Mosquitto",
+            "image": "eclipse-mosquitto:latest",
+            "container_name": "mosquitto",
+            "port": 1883,
+            "description": "Lightweight, open-source MQTT broker",
+            "config_volume": "./mosquitto.conf:/mosquitto/config/mosquitto.conf"
+        },
+        {
+            "name": "emqx",
+            "display_name": "EMQX",
+            "image": "emqx/emqx:latest",
+            "container_name": "emqx",
+            "port": 1883,
+            "description": "Enterprise-grade, scalable MQTT broker",
+            "extra_ports": [
+                18083
+            ]
+        },
+        {
+            "name": "nanomq",
+            "display_name": "NanoMQ",
+            "image": "emqx/nanomq:latest",
+            "container_name": "nanomq",
+            "port": 1883,
+            "description": "Ultra-lightweight edge MQTT broker"
+        },
+        {
+            "name": "vernemq",
+            "display_name": "VerneMQ",
+            "image": "vernemq/vernemq:latest",
+            "container_name": "vernemq",
+            "port": 1883,
+            "description": "Distributed MQTT broker",
+            "environment": {
+                "DOCKER_VERNEMQ_ACCEPT_EULA": "yes",
+                "DOCKER_VERNEMQ_ALLOW_ANONYMOUS": "on"
+            }
+        },
+        {
+            "name": "hivemq",
+            "display_name": "HiveMQ CE",
+            "image": "hivemq/hivemq-ce:latest",
+            "container_name": "hivemq",
+            "port": 1883,
+            "description": "Enterprise MQTT platform (Community Edition)"
+        }
+    ],
+    "network_name": "mqtt_benchmark_net"
+}

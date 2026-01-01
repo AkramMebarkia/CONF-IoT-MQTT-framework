@@ -564,10 +564,12 @@
                 <label class="form-label small">Quick Setup</label>
                 <select id="brokerPreset" class="form-select" onchange="applyBrokerPreset()">
                   <option value="">Custom Configuration</option>
-                  <option value="local">Local Host (Flask on host)</option>
-                  <option value="nanomq">NanoMQ (Docker)</option>
+                  <option value="local">Local Host (localhost)</option>
                   <option value="mosquitto">Mosquitto (Docker)</option>
                   <option value="emqx">EMQX (Docker)</option>
+                  <option value="nanomq">NanoMQ (Docker)</option>
+                  <option value="vernemq">VerneMQ (Docker)</option>
+                  <option value="hivemq">HiveMQ CE (Docker)</option>
                 </select>
               </div>
               <div class="row g-2 mb-3">
@@ -742,10 +744,12 @@
 
     // Add broker presets for easier configuration
     const BROKER_PRESETS = {
-      'local': { host: 'localhost', port: 1883 },
-      'nanomq': { host: 'nanomq', port: 1883 },
-      'mosquitto': { host: 'mosquitto', port: 1883 },
-      'emqx': { host: 'emqx', port: 1883 }
+      'local': { host: 'localhost', port: 1883, docker: false },
+      'mosquitto': { host: 'mosquitto', port: 1883, docker: true },
+      'emqx': { host: 'emqx', port: 1883, docker: true },
+      'nanomq': { host: 'nanomq', port: 1883, docker: true },
+      'vernemq': { host: 'vernemq', port: 1883, docker: true },
+      'hivemq': { host: 'hivemq', port: 1883, docker: true }
     };
 
     // Initialize
@@ -787,15 +791,27 @@
       }
     }
 
-    function applyBrokerPreset() {
+    async function applyBrokerPreset() {
       const preset = document.getElementById('brokerPreset').value;
       if (preset && BROKER_PRESETS[preset]) {
-        document.getElementById('brokerName').value = BROKER_PRESETS[preset].host;
-        document.getElementById('brokerPort').value = BROKER_PRESETS[preset].port;
+        const config = BROKER_PRESETS[preset];
+        document.getElementById('brokerName').value = config.host;
+        document.getElementById('brokerPort').value = config.port;
         
-        // Show helpful message
-        if (preset !== 'local') {
-          showNotification(`Configured for ${preset} Docker container`, 'info');
+        // Auto-start Docker container if needed
+        if (config.docker) {
+          showNotification(`Starting ${preset} container...`, 'info');
+          try {
+            const response = await fetch(`/api/brokers/${preset}/start`, { method: 'POST' });
+            const result = await response.json();
+            if (result.ok) {
+              showNotification(`${preset} broker started successfully!`, 'success');
+            } else {
+              showNotification(`Failed to start ${preset}: ${result.error}`, 'error');
+            }
+          } catch (err) {
+            showNotification(`Error starting broker: ${err.message}`, 'error');
+          }
         }
       }
     }

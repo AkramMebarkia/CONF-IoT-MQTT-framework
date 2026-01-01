@@ -1,0 +1,64 @@
+{
+    "scenario_name": "High Stress Broker Test",
+    "description": "Maximum throughput stress test for broker comparison",
+    "broker_name": "vernemq",
+    "broker_port": 1883,
+    "publisher_groups": [
+        {
+            "name": "HighFreqSensors",
+            "count": 100,
+            "interval": 0.05,
+            "topic": "stress/highfreq/{id}",
+            "qos": 0,
+            "payload_size": 128
+        },
+        {
+            "name": "BurstPublishers",
+            "count": 50,
+            "interval": 0.02,
+            "topic": "stress/burst/{id}",
+            "qos": 0,
+            "payload_size": 64
+        },
+        {
+            "name": "MediumRate",
+            "count": 50,
+            "interval": 0.1,
+            "topic": "stress/medium/{id}",
+            "qos": 1,
+            "payload_size": 256
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "name": "HighFreqMonitor",
+            "count": 10,
+            "topics": [
+                "stress/highfreq/#"
+            ],
+            "qos": 0
+        },
+        {
+            "name": "BurstMonitor",
+            "count": 10,
+            "topics": [
+                "stress/burst/#"
+            ],
+            "qos": 0
+        },
+        {
+            "name": "AllTraffic",
+            "count": 5,
+            "topics": [
+                "stress/#"
+            ],
+            "qos": 0
+        }
+    ],
+    "expected_metrics": {
+        "target_throughput": "5000+ msg/sec",
+        "expected_cpu": "20-40%",
+        "stress_factor": "High - 200 publishers, 25 subscribers, fast intervals"
+    },
+    "notes": "This test generates ~4000-5000 messages/sec to stress the broker"
+}

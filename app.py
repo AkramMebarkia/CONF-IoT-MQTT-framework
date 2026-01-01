@@ -36,6 +36,15 @@ NODE_RED_URL = os.getenv('NODE_RED_URL', 'http://localhost:1880')
 BATCH_SIZE = int(os.getenv('BATCH_SIZE', '500'))
 LATENCY_CALLBACK_URL = os.getenv('LATENCY_CALLBACK_URL', 'http://host.docker.internal:5000/api/latency_batch')
 
+# Multi-instance support
+NODE_RED_INSTANCES_STR = os.getenv('NODE_RED_INSTANCES', '')
+if NODE_RED_INSTANCES_STR:
+    NODE_RED_INSTANCES = [url.strip() for url in NODE_RED_INSTANCES_STR.split(',') if url.strip()]
+else:
+    NODE_RED_INSTANCES = [NODE_RED_URL]
+
+logger.info("Node-RED instances configured: %d", len(NODE_RED_INSTANCES))
+
 
 def get_broker_container(broker_name):
     try:
@@ -110,95 +119,258 @@ def expand_groups():
     })
 
 # =============================================================================
+# BROKER MANAGEMENT ROUTES
+# =============================================================================
+
+BROKERS_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'brokers_config.json')
+DOCKER_NETWORK_NAME = 'mqtt_benchmark_net'
+
+def load_brokers_config():
+    try:
+        with open(BROKERS_CONFIG_PATH, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error("Failed to load brokers config: %s", e)
+        return {"brokers": []}
+
+def ensure_network_exists():
+    """Ensure the Docker network exists for broker/Node-RED communication"""
+    try:
+        client = docker.from_env()
+        try:
+            client.networks.get(DOCKER_NETWORK_NAME)
+        except docker.errors.NotFound:
+            client.networks.create(DOCKER_NETWORK_NAME, driver='bridge')
+            logger.info("Created Docker network: %s", DOCKER_NETWORK_NAME)
+    except Exception as e:
+        logger.error("Failed to create network: %s", e)
+
+@app.route('/api/brokers', methods=['GET'])
+def list_brokers():
+    """List all available brokers with their status"""
+    config = load_brokers_config()
+    brokers = []
+    
+    try:
+        client = docker.from_env()
+        for broker in config.get('brokers', []):
+            status = 'stopped'
+            try:
+                container = client.containers.get(broker['container_name'])
+                status = container.status
+            except docker.errors.NotFound:
+                status = 'not_created'
+            except Exception:
+                status = 'unknown'
+            
+            brokers.append({
+                'name': broker['name'],
+                'display_name': broker['display_name'],
+                'description': broker.get('description', ''),
+                'port': broker.get('port', 1883),
+                'status': status
+            })
+    except Exception as e:
+        logger.error("Error listing brokers: %s", e)
+        return jsonify(error=str(e)), 500
+    
+    return jsonify(brokers=brokers)
+
+@app.route('/api/brokers/<broker_name>/start', methods=['POST'])
+def start_broker(broker_name):
+    """Start a specific broker container, stopping any other running brokers first"""
+    config = load_brokers_config()
+    broker_config = None
+    
+    for b in config.get('brokers', []):
+        if b['name'] == broker_name:
+            broker_config = b
+            break
+    
+    if not broker_config:
+        return jsonify(error=f"Broker '{broker_name}' not found in config"), 404
+    
+    try:
+        client = docker.from_env()
+        ensure_network_exists()
+        
+        # Stop all other brokers first (they share port 1883)
+        for b in config.get('brokers', []):
+            if b['name'] != broker_name:
+                try:
+                    container = client.containers.get(b['container_name'])
+                    if container.status == 'running':
+                        container.stop()
+                        logger.info("Stopped broker: %s", b['name'])
+                except docker.errors.NotFound:
+                    pass
+        
+        # Check if container exists
+        try:
+            container = client.containers.get(broker_config['container_name'])
+            if container.status != 'running':
+                container.start()
+                logger.info("Started existing container: %s", broker_name)
+            
+            # Ensure container is on the correct network
+            try:
+                network = client.networks.get(DOCKER_NETWORK_NAME)
+                if container.id not in [c.id for c in network.containers]:
+                    network.connect(container)
+                    logger.info("Connected %s to network %s", broker_name, DOCKER_NETWORK_NAME)
+            except Exception as net_err:
+                logger.warning("Network connection issue: %s", net_err)
+            
+            return jsonify(ok=True, message=f"Broker {broker_name} started", status='running')
+        except docker.errors.NotFound:
+            pass
+        
+        # Create and start new container
+        ports = {f"{broker_config['port']}/tcp": broker_config['port']}
+        if 'extra_ports' in broker_config:
+            for p in broker_config['extra_ports']:
+                ports[f"{p}/tcp"] = p
+        
+        env_vars = broker_config.get('environment', {})
+        volumes = {}
+        
+        if 'config_volume' in broker_config:
+            src, dst = broker_config['config_volume'].split(':')
+            src = os.path.abspath(src)
+            volumes[src] = {'bind': dst, 'mode': 'ro'}
+        
+        container = client.containers.run(
+            broker_config['image'],
+            name=broker_config['container_name'],
+            ports=ports,
+            environment=env_vars,
+            volumes=volumes,
+            network=DOCKER_NETWORK_NAME,
+            detach=True
+        )
+        
+        logger.info("Created and started broker: %s", broker_name)
+        return jsonify(ok=True, message=f"Broker {broker_name} created and started", status='running')
+        
+    except Exception as e:
+        logger.error("Failed to start broker %s: %s", broker_name, e)
+        return jsonify(error=str(e)), 500
+
+@app.route('/api/brokers/<broker_name>/stop', methods=['POST'])
+def stop_broker(broker_name):
+    """Stop a specific broker container"""
+    try:
+        client = docker.from_env()
+        container = client.containers.get(broker_name)
+        container.stop()
+        logger.info("Stopped broker: %s", broker_name)
+        return jsonify(ok=True, message=f"Broker {broker_name} stopped")
+    except docker.errors.NotFound:
+        return jsonify(error=f"Broker container '{broker_name}' not found"), 404
+    except Exception as e:
+        logger.error("Failed to stop broker: %s", e)
+        return jsonify(error=str(e)), 500
+
+
+# =============================================================================
 # SIMULATION DEPLOYMENT ROUTES
 # =============================================================================
 
 @app.route('/deploy_simulation', methods=['POST'])
 def deploy_simulation():
-    """Deploy simulation flows to Node-RED"""
+    """Deploy simulation flows to multiple Node-RED instances"""
     data = request.get_json()
 
     publisher_groups = data.get("publisher_groups", [])
     subscriber_groups = data.get("subscriber_groups", []) 
 
-    # Get broker configuration
     broker_host = data.get("broker_name", "localhost")
     broker_port = int(data.get("broker_port", 1883))
 
-    # Expand groups into individual instances
     pub_expander = GroupExpander(mode="publisher")
     pub_instances, pub_warnings = pub_expander.expand(publisher_groups)
 
     sub_expander = GroupExpander(mode="subscriber")
     sub_instances, sub_warnings = sub_expander.expand(subscriber_groups)
 
-    # Build Node-RED flow
-    all_nodes = []
+    num_instances = len(NODE_RED_INSTANCES)
+    logger.info("Distributing workload across %d Node-RED instances", num_instances)
 
-    # Create main tab
-    tab_id = new_id()
-    all_nodes.append({
-        "id": tab_id,
-        "type": "tab",
-        "label": "Sim-AutoFlow",
-        "disabled": False,
-        "info": ""
-    })
+    # Distribute publishers and subscribers round-robin
+    instance_pubs = [[] for _ in range(num_instances)]
+    instance_subs = [[] for _ in range(num_instances)]
 
-    # MQTT broker configuration node
-    broker_config_id = new_id()
-    all_nodes.append({
-        "id": broker_config_id,
-        "type": "mqtt-broker",
-        "name": broker_host,
-        "broker": broker_host,
-        "port": broker_port,
-        "clientid": "",
-        "usetls": False,
-        "protocolVersion": 4,
-        "keepalive": 60,
-        "cleansession": True
-    })
+    for i, pub in enumerate(pub_instances):
+        instance_pubs[i % num_instances].append(pub)
 
-    # Add publisher nodes
-    y = 80
-    
-    publisher_group_map = {}
-    for pub in pub_instances:
-        group = pub.get("group", "default")
-        if group not in publisher_group_map:
-            publisher_group_map[group] = []
-        publisher_group_map[group].append(pub)
-    
-    for pub in pub_instances:
-        inject_id = new_id()
-        function_id = new_id()
-        mqtt_id = new_id()
+    for i, sub in enumerate(sub_instances):
+        instance_subs[i % num_instances].append(sub)
 
-        all_nodes.extend([
-            {
-                "id": inject_id,
-                "type": "inject",
-                "z": tab_id,
-                "name": f"{pub['name']} Timer",
-                "props": [{"p": "payload"}],
-                "repeat": str(pub.get("interval", 1.0)), 
-                "crontab": "",
-                "once": True,
-                "onceDelay": 0.1,
-                "topic": "",
-                "payload": "",
-                "payloadType": "date",
-                "x": 140,
-                "y": y,
-                "wires": [[function_id]]
-            },
-            {
-                "id": function_id,
-                "type": "function",
-                "z": tab_id,
-                "name": f"{pub['name']} Generator",
-                "func": f"""
+    deployment_results = []
+
+    for idx, instance_url in enumerate(NODE_RED_INSTANCES):
+        pubs = instance_pubs[idx]
+        subs = instance_subs[idx]
+
+        if not pubs and not subs:
+            logger.info("Instance %d (%s): No nodes to deploy", idx, instance_url)
+            continue
+
+        all_nodes = []
+        tab_id = new_id()
+        all_nodes.append({
+            "id": tab_id,
+            "type": "tab",
+            "label": "Sim-AutoFlow",
+            "disabled": False,
+            "info": f"Instance {idx}"
+        })
+
+        broker_config_id = new_id()
+        all_nodes.append({
+            "id": broker_config_id,
+            "type": "mqtt-broker",
+            "name": broker_host,
+            "broker": broker_host,
+            "port": broker_port,
+            "clientid": "",
+            "usetls": False,
+            "protocolVersion": 4,
+            "keepalive": 60,
+            "cleansession": True
+        })
+
+        y = 80
+
+        for pub in pubs:
+            inject_id = new_id()
+            function_id = new_id()
+            mqtt_id = new_id()
+
+            all_nodes.extend([
+                {
+                    "id": inject_id,
+                    "type": "inject",
+                    "z": tab_id,
+                    "name": f"{pub['name']} Timer",
+                    "props": [{"p": "payload"}],
+                    "repeat": str(pub.get("interval", 1.0)), 
+                    "crontab": "",
+                    "once": True,
+                    "onceDelay": 0.1,
+                    "topic": "",
+                    "payload": "",
+                    "payloadType": "date",
+                    "x": 140,
+                    "y": y,
+                    "wires": [[function_id]]
+                },
+                {
+                    "id": function_id,
+                    "type": "function",
+                    "z": tab_id,
+                    "name": f"{pub['name']} Generator",
+                    "func": f"""
 var pubName = '{pub['name']}';
 var topic = '{pub['topic']}';
 var payloadSize = {pub.get('payload_size', 256)};
@@ -230,221 +402,222 @@ return {{
     retain: {str(pub.get('retain', False)).lower()},
 }};
 """,
-                "outputs": 1,
-                "noerr": 0,
-                "x": 340,
-                "y": y,
-                "wires": [[mqtt_id]]
-            },
-            {
-                "id": mqtt_id,
-                "type": "mqtt out",
-                "z": tab_id,
-                "name": f"{pub['name']} → {pub['topic']}",
-                "topic": pub["topic"],
-                "qos": str(pub.get("qos", 1)),
-                "retain": str(pub.get("retain", False)).lower(),
-                "broker": broker_config_id,
-                "x": 560,
-                "y": y,
-                "wires": []
-            }
-        ])
-        y += 60
-
-    for sub in sub_instances:
-        for topic in sub["topics"]:
-            mqtt_in_id = new_id()
-            delay_func_id = new_id()
-            http_req_id = new_id()
-
-            all_nodes.extend([
-                {
-                    "id": mqtt_in_id,
-                    "type": "mqtt in",
-                    "z": tab_id,
-                    "name": f"{sub['name']} ← {topic}",
-                    "topic": topic,
-                    "qos": str(sub.get("qos", 1)),
-                    "datatype": "auto",
-                    "broker": broker_config_id,
-                    "x": 100,
-                    "y": y,
-                    "wires": [[delay_func_id]]
-                },
-                {
-                    "id": delay_func_id,
-                    "type": "function",
-                    "z": tab_id,
-                    "name": f"{sub['name']} DelayCalc",
-                    "func": f"""
-const N = {BATCH_SIZE};
-const bufKey = '{sub['name']}_latBuf';
-let buf = context.get(bufKey) || [];
-
-try {{
-    const d = JSON.parse(msg.payload);
-    const now = Date.now();
-    const latency = now - d.t;
-
-    if (latency < 0 || latency > 60000) {{
-        return null;
-    }}
-
-    buf.push({{
-        subscriber: '{sub['name']}',
-        topic: msg.topic,
-        delay: latency,
-        publisher_name: d.p,
-        seq_id: d.s,
-        timestamp: now
-    }});
-    context.set(bufKey, buf);
-
-    if (buf.length >= N) {{
-        msg.url = '{LATENCY_CALLBACK_URL}';
-        msg.method = 'POST';
-        msg.headers = {{ 'Content-Type': 'application/json' }};
-        msg.payload = buf;
-        context.set(bufKey, []);
-        return msg;
-    }}
-
-    return null;
-
-}} catch (e) {{
-    return null;
-}}
-""",
                     "outputs": 1,
                     "noerr": 0,
-                    "initialize": "",
-                    "finalize": "",
-                    "libs": [],
-                    "x": 300,
+                    "x": 340,
                     "y": y,
-                    "wires": [[http_req_id]]
+                    "wires": [[mqtt_id]]
                 },
                 {
-                    "id": http_req_id,
-                    "type": "http request",
+                    "id": mqtt_id,
+                    "type": "mqtt out",
                     "z": tab_id,
-                    "name": "Send Latency",
-                    "method": "POST",
-                    "ret": "txt",
-                    "paytoqs": "ignore",
-                    "url": "",
-                    "tls": "",
-                    "persist": False,
-                    "proxy": "",
-                    "insecureHTTPParser": False,
-                    "authType": "",
-                    "senderr": False,
-                    "headers": [],
-                    "x": 500,
+                    "name": f"{pub['name']} → {pub['topic']}",
+                    "topic": pub["topic"],
+                    "qos": str(pub.get("qos", 1)),
+                    "retain": str(pub.get("retain", False)).lower(),
+                    "broker": broker_config_id,
+                    "x": 560,
                     "y": y,
-                    "wires": [[]]
+                    "wires": []
                 }
             ])
-            y += 80
+            y += 60
 
-    try:
-        logger.info("Deploying %d nodes to Node-RED...", len(all_nodes))
-        resp = requests.post(
-            f'{NODE_RED_URL}/flows',
-            headers={'Content-Type': 'application/json'},
-            json=all_nodes,
-            timeout=30
-        )
-        if resp.status_code == 204:
-            logger.info("Successfully deployed to Node-RED - Publishers: %d, Subscribers: %d", 
-                       len(pub_instances), len(sub_instances))
-            return jsonify(ok=True, warnings=pub_warnings + sub_warnings)
-        else:
-            logger.error("Node-RED deployment failed: %d - %s", resp.status_code, resp.text)
-            return jsonify(error=f"Failed to deploy: {resp.text}"), 500
-    except requests.RequestException as e:
-        logger.error("Node-RED connection failed: %s", str(e))
-        return jsonify(error=f"Node-RED connection failed: {str(e)}"), 500
+        for sub in subs:
+            for topic in sub["topics"]:
+                mqtt_in_id = new_id()
+                stats_func_id = new_id()
+
+                all_nodes.extend([
+                    {
+                        "id": mqtt_in_id,
+                        "type": "mqtt in",
+                        "z": tab_id,
+                        "name": f"{sub['name']} ← {topic}",
+                        "topic": topic,
+                        "qos": str(sub.get("qos", 1)),
+                        "datatype": "auto",
+                        "broker": broker_config_id,
+                        "x": 100,
+                        "y": y,
+                        "wires": [[stats_func_id]]
+                    },
+                    {
+                        "id": stats_func_id,
+                        "type": "function",
+                        "z": tab_id,
+                        "name": "RunningStats",
+                        "func": """
+// Ultra-efficient running statistics - NO HTTP during test
+// Uses flow-level context for global aggregation
+try {
+    const d = JSON.parse(msg.payload);
+    const now = Date.now();
+    const delay = now - d.t;
+    
+    // Skip invalid delays
+    if (delay < 0 || delay > 60000) {
+        return null;
+    }
+    
+    // Get or initialize running stats
+    var stats = flow.get('latencyStats') || {
+        count: 0,
+        sum: 0,
+        min: Infinity,
+        max: 0
+    };
+    
+    // Update running statistics - O(1) memory
+    stats.count++;
+    stats.sum += delay;
+    stats.min = Math.min(stats.min, delay);
+    stats.max = Math.max(stats.max, delay);
+    
+    flow.set('latencyStats', stats);
+    
+    // No output - no HTTP calls during test!
+    return null;
+    
+} catch (e) {
+    return null;
+}
+""",
+                        "outputs": 1,
+                        "noerr": 0,
+                        "initialize": "",
+                        "finalize": "",
+                        "libs": [],
+                        "x": 300,
+                        "y": y,
+                        "wires": [[]]  # No wires - no HTTP node!
+                    }
+                ])
+                y += 60
+
+        try:
+            logger.info("Deploying %d nodes to instance %d (%s) - Pubs: %d, Subs: %d", 
+                       len(all_nodes), idx, instance_url, len(pubs), len(subs))
+            resp = requests.post(
+                f'{instance_url}/flows',
+                headers={'Content-Type': 'application/json'},
+                json=all_nodes,
+                timeout=30
+            )
+            if resp.status_code == 204:
+                deployment_results.append({"instance": idx, "url": instance_url, "ok": True, "pubs": len(pubs), "subs": len(subs)})
+            else:
+                deployment_results.append({"instance": idx, "url": instance_url, "ok": False, "error": resp.text})
+                logger.error("Instance %d deployment failed: %s", idx, resp.text)
+        except requests.RequestException as e:
+            deployment_results.append({"instance": idx, "url": instance_url, "ok": False, "error": str(e)})
+            logger.error("Instance %d connection failed: %s", idx, str(e))
+
+    successful = sum(1 for r in deployment_results if r.get("ok"))
+    logger.info("Deployment complete: %d/%d instances successful", successful, len(deployment_results))
+
+    return jsonify(
+        ok=successful > 0,
+        warnings=pub_warnings + sub_warnings,
+        instances=deployment_results,
+        total_publishers=len(pub_instances),
+        total_subscribers=len(sub_instances)
+    )
 
 
 
 @app.route('/simulation/<action>', methods=['POST'])
 def control_simulation(action):
+    """Control simulation across all Node-RED instances"""
     if action not in ('start', 'stop'):
         return jsonify({"error": "Invalid action"}), 400
 
-    try:
-        flows_resp = requests.get(f'{NODE_RED_URL}/flows', timeout=10)
-        flows_resp.raise_for_status()
-        flows = flows_resp.json()
+    results = []
+    total_inject_count = 0
 
-        sim_tab_id = None
-        for node in flows:
-            if node.get("type") == "tab" and node.get("label") == "Sim-AutoFlow":
-                sim_tab_id = node["id"]
-                break
-        
-        if not sim_tab_id:
-            return jsonify({"error": "Simulation tab not found"}), 404
+    for idx, instance_url in enumerate(NODE_RED_INSTANCES):
+        try:
+            flows_resp = requests.get(f'{instance_url}/flows', timeout=120)
+            flows_resp.raise_for_status()
+            flows = flows_resp.json()
 
-        inject_count = 0
-        for node in flows:
-            if node.get("type") == "inject" and node.get("z") == sim_tab_id:
-                if action == "stop":
-                    node["repeat"] = ""
-                    node["once"] = False
-                    node["onceDelay"] = 0.1
-                    node["crontab"] = ""
-                elif action == "start":
-                    pass
-                inject_count += 1
-
-        resp = requests.post(
-            f'{NODE_RED_URL}/flows',
-            headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'full'},
-            json=flows,
-            timeout=30
-        )
-        
-        if resp.status_code == 204:
-            logger.info("Simulation %s: affected %d inject nodes (full redeploy)", action, inject_count)
-            return jsonify(ok=True, action=action, inject_nodes_affected=inject_count)
-        else:
-            return jsonify(error=f"Failed to {action}: {resp.text}"), 500
-
-    except requests.RequestException as e:
-        return jsonify(error=f"Node-RED operation failed: {str(e)}"), 500
-
-
-def cleanup_simulation():
-    try:
-        flows_resp = requests.get(f'{NODE_RED_URL}/flows', timeout=10)
-        flows_resp.raise_for_status()
-        flows = flows_resp.json()
-        
-        sim_tab_id = None
-        for node in flows:
-            if node.get("type") == "tab" and node.get("label") == "Sim-AutoFlow":
-                sim_tab_id = node["id"]
-                break
-        
-        if sim_tab_id:
-            flows = [node for node in flows if node.get("z") != sim_tab_id and node.get("id") != sim_tab_id]
+            sim_tab_id = None
+            for node in flows:
+                if node.get("type") == "tab" and node.get("label") == "Sim-AutoFlow":
+                    sim_tab_id = node["id"]
+                    break
             
+            if not sim_tab_id:
+                results.append({"instance": idx, "ok": False, "error": "No simulation tab"})
+                continue
+
+            inject_count = 0
+            for node in flows:
+                if node.get("type") == "inject" and node.get("z") == sim_tab_id:
+                    if action == "stop":
+                        node["repeat"] = ""
+                        node["once"] = False
+                        node["onceDelay"] = 0.1
+                        node["crontab"] = ""
+                    inject_count += 1
+
             resp = requests.post(
-                f'{NODE_RED_URL}/flows',
+                f'{instance_url}/flows',
                 headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'full'},
                 json=flows,
-                timeout=10
+                timeout=30
             )
             
             if resp.status_code == 204:
-                logger.info("Simulation flows removed successfully")
-                return True
-    except Exception as e:
-        logger.error("Failed to clean up simulation: %s", e)
-    return False
+                results.append({"instance": idx, "ok": True, "inject_count": inject_count})
+                total_inject_count += inject_count
+            else:
+                results.append({"instance": idx, "ok": False, "error": resp.text})
+
+        except requests.RequestException as e:
+            results.append({"instance": idx, "ok": False, "error": str(e)})
+
+    successful = sum(1 for r in results if r.get("ok"))
+    logger.info("Simulation %s: %d/%d instances, %d inject nodes", action, successful, len(results), total_inject_count)
+    
+    return jsonify(ok=successful > 0, action=action, results=results, total_inject_nodes=total_inject_count)
+
+
+def cleanup_simulation():
+    """Remove simulation flows from all Node-RED instances"""
+    success_count = 0
+    
+    for idx, instance_url in enumerate(NODE_RED_INSTANCES):
+        try:
+            flows_resp = requests.get(f'{instance_url}/flows', timeout=120)
+            flows_resp.raise_for_status()
+            flows = flows_resp.json()
+            
+            sim_tab_id = None
+            for node in flows:
+                if node.get("type") == "tab" and node.get("label") == "Sim-AutoFlow":
+                    sim_tab_id = node["id"]
+                    break
+            
+            if sim_tab_id:
+                flows = [node for node in flows if node.get("z") != sim_tab_id and node.get("id") != sim_tab_id]
+                
+                resp = requests.post(
+                    f'{instance_url}/flows',
+                    headers={'Content-Type': 'application/json', 'Node-RED-Deployment-Type': 'full'},
+                    json=flows,
+                    timeout=30
+                )
+                
+                if resp.status_code == 204:
+                    success_count += 1
+                    logger.info("Instance %d cleanup successful", idx)
+        except Exception as e:
+            logger.error("Instance %d cleanup failed: %s", idx, e)
+    
+    logger.info("Cleanup complete: %d/%d instances", success_count, len(NODE_RED_INSTANCES))
+    return success_count > 0
 
 
 @app.route('/api/metrics')
@@ -494,6 +667,91 @@ def receive_latency_batch():
     except Exception as e:
         logger.error("Latency batch receiver error: %s", e)
         return jsonify(error=str(e)), 400
+
+
+def collect_nodered_stats():
+    """Fetch running latency stats from all Node-RED instances"""
+    aggregated_stats = {
+        'count': 0,
+        'sum': 0,
+        'min': float('inf'),
+        'max': 0
+    }
+    
+    for instance_url in NODE_RED_INSTANCES:
+        try:
+            # Use Node-RED's context/flow endpoint to get stats
+            # First, we need to inject a trigger to get the stats
+            flows_resp = requests.get(f'{instance_url}/flows', timeout=10)
+            if flows_resp.status_code != 200:
+                continue
+                
+            flows = flows_resp.json()
+            
+            # Find the Sim-AutoFlow tab
+            tab_id = None
+            for node in flows:
+                if node.get('type') == 'tab' and node.get('label') == 'Sim-AutoFlow':
+                    tab_id = node['id']
+                    break
+            
+            if not tab_id:
+                continue
+            
+            # Use Node-RED's context API to get flow context
+            # The stats are stored at flow.latencyStats
+            context_resp = requests.get(
+                f'{instance_url}/flow/{tab_id}/context',
+                timeout=10
+            )
+            
+            if context_resp.status_code == 200:
+                context = context_resp.json()
+                stats = context.get('latencyStats', {})
+                
+                if stats.get('count', 0) > 0:
+                    aggregated_stats['count'] += stats['count']
+                    aggregated_stats['sum'] += stats['sum']
+                    aggregated_stats['min'] = min(aggregated_stats['min'], stats['min'])
+                    aggregated_stats['max'] = max(aggregated_stats['max'], stats['max'])
+                    
+                    logger.info("Collected stats from %s: count=%d, avg=%.2fms",
+                               instance_url, stats['count'], stats['sum']/stats['count'])
+        except Exception as e:
+            logger.warning("Failed to collect stats from %s: %s", instance_url, e)
+    
+    # Calculate average
+    if aggregated_stats['count'] > 0:
+        aggregated_stats['avg'] = aggregated_stats['sum'] / aggregated_stats['count']
+    else:
+        aggregated_stats['avg'] = 0
+        aggregated_stats['min'] = 0
+    
+    return aggregated_stats
+
+
+@app.route('/api/collect_stats', methods=['POST'])
+def api_collect_stats():
+    """API endpoint to collect and return running stats from Node-RED"""
+    stats = collect_nodered_stats()
+    
+    # Also add to delay_data for compatibility with existing evaluation
+    if stats['count'] > 0:
+        delay_data.clear()
+        # Create synthetic records for the evaluation controller
+        for _ in range(min(stats['count'], 1000)):  # Cap at 1000 for memory
+            delay_data.append({
+                'subscriber': 'aggregated',
+                'topic': 'aggregated',
+                'delay': stats['avg'],  # Use average for compatibility
+                'timestamp': time.time()
+            })
+    
+    return jsonify({
+        'ok': True,
+        'stats': stats,
+        'message': f"Collected {stats['count']} samples, avg={stats.get('avg', 0):.2f}ms"
+    })
 
 
 # =============================================================================
@@ -622,6 +880,14 @@ def run_tests_in_background(job_id, args):
         
         eval_results = controller.run()
         
+        # Collect running stats from Node-RED (new optimized approach)
+        nodered_stats = collect_nodered_stats()
+        if nodered_stats['count'] > 0:
+            eval_results['nodered_stats'] = nodered_stats
+            logger.info("Collected Node-RED running stats: count=%d, avg=%.2fms, min=%.2fms, max=%.2fms",
+                       nodered_stats['count'], nodered_stats['avg'],
+                       nodered_stats['min'], nodered_stats['max'])
+        
         if 'error' in eval_results:
             raise Exception(eval_results['error'])
 
@@ -714,7 +980,7 @@ def results(job_id):
 @app.route('/verify_flow', methods=['GET'])
 def verify_flow():
     try:
-        resp = requests.get(f'{NODE_RED_URL}/flows', timeout=5)
+        resp = requests.get(f'{NODE_RED_URL}/flows', timeout=120)
         flows = resp.json()
         
         node_types = {}

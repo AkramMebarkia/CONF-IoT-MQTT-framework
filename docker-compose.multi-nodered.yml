@@ -1,0 +1,52 @@
+services:
+  # ===== Node-RED Instances =====
+  nodered1:
+    image: nodered/node-red:latest
+    container_name: nodered1
+    ports:
+      - "1880:1880"
+    volumes:
+      - nodered1_data:/data
+    environment:
+      - TZ=Asia/Riyadh
+    networks:
+      - mqtt_benchmark_net
+    restart: unless-stopped
+
+  nodered2:
+    image: nodered/node-red:latest
+    container_name: nodered2
+    ports:
+      - "1881:1880"
+    volumes:
+      - nodered2_data:/data
+    environment:
+      - TZ=Asia/Riyadh
+    networks:
+      - mqtt_benchmark_net
+    restart: unless-stopped
+
+  nodered3:
+    image: nodered/node-red:latest
+    container_name: nodered3
+    ports:
+      - "1882:1880"
+    volumes:
+      - nodered3_data:/data
+    environment:
+      - TZ=Asia/Riyadh
+    networks:
+      - mqtt_benchmark_net
+    restart: unless-stopped
+
+networks:
+  mqtt_benchmark_net:
+    name: mqtt_benchmark_net
+    driver: bridge
+
+volumes:
+  nodered1_data:
+  nodered2_data:
+  nodered3_data:
+
+
