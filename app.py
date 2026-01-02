@@ -424,101 +424,186 @@ return {{
             ])
             y += 60
 
-        for sub in subs:
-            for topic in sub["topics"]:
-                mqtt_in_id = new_id()
-                delay_func_id = new_id()
-                http_req_id = new_id()
+        # =================================================================
+        # CENTRALIZED AGGREGATOR FLOW (Optimization: Single HTTP per interval)
+        # =================================================================
+        # Create aggregator nodes ONCE per instance, then wire all subscribers to it
+        aggregator_id = new_id()
+        flush_inject_id = new_id()
+        flush_func_id = new_id()
+        http_stats_id = new_id()
 
-                all_nodes.extend([
-                    {
-                        "id": mqtt_in_id,
-                        "type": "mqtt in",
-                        "z": tab_id,
-                        "name": f"{sub['name']} ← {topic}",
-                        "topic": topic,
-                        "qos": str(sub.get("qos", 1)),
-                        "datatype": "auto",
-                        "broker": broker_config_id,
-                        "x": 100,
-                        "y": y,
-                        "wires": [[delay_func_id]]
-                    },
-                    {
-                        "id": delay_func_id,
-                        "type": "function",
-                        "z": tab_id,
-                        "name": f"{sub['name']} DelayCalc",
-                        "func": f"""
-const N = {BATCH_SIZE};
-const bufKey = '{sub['name']}_latBuf';
-let buf = context.get(bufKey) || [];
+        # Aggregator callback URL for aggregated stats
+        stats_callback_url = LATENCY_CALLBACK_URL.replace('/api/latency_batch', '/api/latency_stats')
+        if '/api/latency_stats' not in stats_callback_url:
+            stats_callback_url = 'http://host.docker.internal:5000/api/latency_stats'
 
+        # Aggregator Function Node - receives all latency messages and accumulates stats
+        aggregator_func = f"""
+// Centralized Aggregator - accumulates latency statistics
 try {{
     const d = JSON.parse(msg.payload);
     const now = Date.now();
     const latency = now - d.t;
 
+    // Validate latency
     if (latency < 0 || latency > 60000) {{
         return null;
     }}
 
-    buf.push({{
-        subscriber: '{sub['name']}',
-        topic: msg.topic,
-        delay: latency,
-        publisher_name: d.p,
-        seq_id: d.s,
-        timestamp: now
-    }});
-    context.set(bufKey, buf);
+    // Get or initialize flow-scoped stats
+    let stats = flow.get('latency_stats') || {{
+        count: 0,
+        sum: 0,
+        sum_sq: 0,
+        min: Infinity,
+        max: -Infinity
+    }};
 
-    if (buf.length >= N) {{
-        msg.url = '{LATENCY_CALLBACK_URL}';
-        msg.method = 'POST';
-        msg.headers = {{ 'Content-Type': 'application/json' }};
-        msg.payload = buf;
-        context.set(bufKey, []);
-        return msg;
-    }}
+    // Update running statistics
+    stats.count++;
+    stats.sum += latency;
+    stats.sum_sq += latency * latency;
+    stats.min = Math.min(stats.min, latency);
+    stats.max = Math.max(stats.max, latency);
 
-    return null;
-
+    flow.set('latency_stats', stats);
+    return null; // Don't forward - stats sent by timer
 }} catch (e) {{
     return null;
 }}
-""",
-                        "outputs": 1,
-                        "noerr": 0,
-                        "initialize": "",
-                        "finalize": "",
-                        "libs": [],
-                        "x": 300,
-                        "y": y,
-                        "wires": [[http_req_id]]
-                    },
-                    {
-                        "id": http_req_id,
-                        "type": "http request",
-                        "z": tab_id,
-                        "name": "Send Latency",
-                        "method": "POST",
-                        "ret": "txt",
-                        "paytoqs": "ignore",
-                        "url": "",
-                        "tls": "",
-                        "persist": False,
-                        "proxy": "",
-                        "insecureHTTPParser": False,
-                        "authType": "",
-                        "senderr": False,
-                        "headers": [],
-                        "x": 500,
-                        "y": y,
-                        "wires": [[]]
-                    }
-                ])
-                y += 80
+"""
+
+        # Flush Function Node - triggered by timer, sends aggregated stats
+        flush_func = f"""
+// Flush aggregated stats to backend
+let stats = flow.get('latency_stats');
+
+if (!stats || stats.count === 0) {{
+    return null; // Nothing to send
+}}
+
+// Prepare payload
+msg.payload = {{
+    count: stats.count,
+    sum: stats.sum,
+    sum_sq: stats.sum_sq,
+    min: stats.min === Infinity ? 0 : stats.min,
+    max: stats.max === -Infinity ? 0 : stats.max,
+    timestamp: Date.now()
+}};
+
+msg.url = '{stats_callback_url}';
+msg.method = 'POST';
+msg.headers = {{ 'Content-Type': 'application/json' }};
+
+// Reset stats for next window
+flow.set('latency_stats', {{
+    count: 0,
+    sum: 0,
+    sum_sq: 0,
+    min: Infinity,
+    max: -Infinity
+}});
+
+return msg;
+"""
+
+        # Position for aggregator infrastructure (bottom of flow)
+        agg_y = y + 100
+
+        # Add aggregator infrastructure nodes
+        all_nodes.extend([
+            {
+                "id": aggregator_id,
+                "type": "function",
+                "z": tab_id,
+                "name": "Latency Aggregator",
+                "func": aggregator_func,
+                "outputs": 1,
+                "noerr": 0,
+                "initialize": "",
+                "finalize": "",
+                "libs": [],
+                "x": 400,
+                "y": agg_y,
+                "wires": [[]]  # No output - stats accumulated in flow context
+            },
+            {
+                "id": flush_inject_id,
+                "type": "inject",
+                "z": tab_id,
+                "name": "Stats Timer (1s)",
+                "props": [{"p": "payload"}],
+                "repeat": "1",  # Fire every 1 second
+                "crontab": "",
+                "once": True,
+                "onceDelay": "1",
+                "topic": "",
+                "payload": "",
+                "payloadType": "date",
+                "x": 150,
+                "y": agg_y + 80,
+                "wires": [[flush_func_id]]
+            },
+            {
+                "id": flush_func_id,
+                "type": "function",
+                "z": tab_id,
+                "name": "Flush Stats",
+                "func": flush_func,
+                "outputs": 1,
+                "noerr": 0,
+                "initialize": "",
+                "finalize": "",
+                "libs": [],
+                "x": 350,
+                "y": agg_y + 80,
+                "wires": [[http_stats_id]]
+            },
+            {
+                "id": http_stats_id,
+                "type": "http request",
+                "z": tab_id,
+                "name": "Send Aggregated Stats",
+                "method": "POST",
+                "ret": "txt",
+                "paytoqs": "ignore",
+                "url": "",
+                "tls": "",
+                "persist": False,
+                "proxy": "",
+                "insecureHTTPParser": False,
+                "authType": "",
+                "senderr": False,
+                "headers": [],
+                "x": 550,
+                "y": agg_y + 80,
+                "wires": [[]]
+            }
+        ])
+
+        # =================================================================
+        # SUBSCRIBER NODES - Wire all to the central Aggregator
+        # =================================================================
+        for sub in subs:
+            for topic in sub["topics"]:
+                mqtt_in_id = new_id()
+
+                all_nodes.append({
+                    "id": mqtt_in_id,
+                    "type": "mqtt in",
+                    "z": tab_id,
+                    "name": f"{sub['name']} ← {topic}",
+                    "topic": topic,
+                    "qos": str(sub.get("qos", 1)),
+                    "datatype": "auto",
+                    "broker": broker_config_id,
+                    "x": 100,
+                    "y": y,
+                    "wires": [[aggregator_id]]  # Wire directly to aggregator
+                })
+                y += 50  # Reduced spacing since we removed per-sub nodes
 
         try:
             logger.info("Deploying %d nodes to instance %d (%s) - Pubs: %d, Subs: %d", 
@@ -694,6 +779,105 @@ def receive_latency_batch():
 
 
 # =============================================================================
+# AGGREGATED LATENCY STATS (Optimized - receives pre-computed stats from Node-RED)
+# =============================================================================
+
+# Global storage for aggregated statistics
+aggregated_stats = {
+    'count': 0,
+    'sum': 0.0,
+    'sum_sq': 0.0,
+    'min': float('inf'),
+    'max': float('-inf'),
+    'windows_received': 0
+}
+aggregated_stats_lock = threading.Lock()
+
+
+@app.route('/api/latency_stats', methods=['POST'])
+def receive_latency_stats():
+    """
+    Receive pre-aggregated latency statistics from Node-RED.
+    Payload: { count, sum, sum_sq, min, max, timestamp }
+    """
+    global aggregated_stats
+    try:
+        data = request.get_json(force=True)
+        
+        count = int(data.get('count', 0))
+        if count == 0:
+            return jsonify(ok=True, message="Empty window")
+        
+        with aggregated_stats_lock:
+            aggregated_stats['count'] += count
+            aggregated_stats['sum'] += float(data.get('sum', 0))
+            aggregated_stats['sum_sq'] += float(data.get('sum_sq', 0))
+            aggregated_stats['min'] = min(aggregated_stats['min'], float(data.get('min', float('inf'))))
+            aggregated_stats['max'] = max(aggregated_stats['max'], float(data.get('max', float('-inf'))))
+            aggregated_stats['windows_received'] += 1
+        
+        logger.debug("Received aggregated stats: count=%d, windows=%d", 
+                    count, aggregated_stats['windows_received'])
+        
+        return jsonify(ok=True, received=count)
+    except Exception as e:
+        logger.error("Aggregated stats receiver error: %s", e)
+        return jsonify(error=str(e)), 400
+
+
+@app.route('/api/latency_stats', methods=['GET'])
+def get_latency_stats():
+    """
+    Get the current aggregated latency statistics.
+    Returns: { count, mean, min, max, stddev, variance }
+    """
+    global aggregated_stats
+    with aggregated_stats_lock:
+        count = aggregated_stats['count']
+        if count == 0:
+            return jsonify({
+                'count': 0,
+                'mean': 0,
+                'min': 0,
+                'max': 0,
+                'stddev': 0,
+                'variance': 0,
+                'windows_received': aggregated_stats['windows_received']
+            })
+        
+        mean = aggregated_stats['sum'] / count
+        variance = (aggregated_stats['sum_sq'] / count) - (mean * mean)
+        stddev = variance ** 0.5 if variance > 0 else 0
+        
+        return jsonify({
+            'count': count,
+            'mean': round(mean, 2),
+            'min': round(aggregated_stats['min'], 2) if aggregated_stats['min'] != float('inf') else 0,
+            'max': round(aggregated_stats['max'], 2) if aggregated_stats['max'] != float('-inf') else 0,
+            'stddev': round(stddev, 2),
+            'variance': round(variance, 2),
+            'windows_received': aggregated_stats['windows_received']
+        })
+
+
+@app.route('/api/latency_stats/reset', methods=['POST'])
+def reset_latency_stats():
+    """Reset the aggregated latency statistics."""
+    global aggregated_stats
+    with aggregated_stats_lock:
+        aggregated_stats = {
+            'count': 0,
+            'sum': 0.0,
+            'sum_sq': 0.0,
+            'min': float('inf'),
+            'max': float('-inf'),
+            'windows_received': 0
+        }
+    logger.info("Aggregated latency stats reset")
+    return jsonify(ok=True)
+
+
+# =============================================================================
 # DOCKER MONITORING FUNCTIONS
 # =============================================================================
 
@@ -724,8 +908,11 @@ def monitor_container_stats(container_id, csv_path, stop_event):
                                     precpu_stats.get('cpu_usage', {}).get('total_usage', 0)
                         system_delta = cpu_stats.get('system_cpu_usage', 0) - \
                                     precpu_stats.get('system_cpu_usage', 0)
+                        
+                        # Get number of CPUs for normalization
+                        num_cpus = cpu_stats.get('online_cpus') or len(cpu_stats.get('cpu_usage', {}).get('percpu_usage', [1])) or 1
 
-                        cpu_percent = (cpu_delta / system_delta) * 100 if system_delta > 0 else 0
+                        cpu_percent = (cpu_delta / system_delta) * 100 / num_cpus if system_delta > 0 else 0
 
                         # Memory statistics
                         mem_usage = stats.get('memory_stats', {}).get('usage', 0)
@@ -829,13 +1016,24 @@ def run_tests_in_background(job_id, args):
             )
             monitor_thread.start()
 
+        # Reset aggregated stats before evaluation
+        with aggregated_stats_lock:
+            aggregated_stats['count'] = 0
+            aggregated_stats['sum'] = 0.0
+            aggregated_stats['sum_sq'] = 0.0
+            aggregated_stats['min'] = float('inf')
+            aggregated_stats['max'] = float('-inf')
+            aggregated_stats['windows_received'] = 0
+        logger.info("Aggregated stats reset for new evaluation")
+
         controller = EvaluationController(
             broker_host=mqtt_host,
             broker_port=broker_port,
             duration=duration,
             job_id=job_id,
             delay_queue=delay_data,
-            warmup_seconds=int(args.get('warmup', 10))
+            warmup_seconds=int(args.get('warmup', 10)),
+            aggregated_stats_ref=aggregated_stats  # Pass reference to aggregated stats
         )
         
         eval_results = controller.run()

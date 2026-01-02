@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class EvaluationController:
-    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results", delay_queue=None, warmup_seconds=10):
+    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results", delay_queue=None, warmup_seconds=10, aggregated_stats_ref=None):
         self.broker_host = broker_host
         self.broker_port = broker_port
         self.duration = duration
@@ -26,6 +26,7 @@ class EvaluationController:
         self.message_count = 0
         self.connection_error = None
         self.delay_queue = delay_queue
+        self.aggregated_stats_ref = aggregated_stats_ref  # Reference to global aggregated stats
 
         self.latency_tracker = EnhancedLatencyTracker()
         self.throughput_tracker = FixedThroughputTracker()
@@ -176,6 +177,25 @@ class EvaluationController:
         self.client.loop_stop()
         self.client.disconnect()
         monitor_thread.join(timeout=3)
+
+        # Ingest aggregated stats from Node-RED if available
+        if self.aggregated_stats_ref is not None:
+            try:
+                # Read the current aggregated stats
+                agg_data = {
+                    'count': self.aggregated_stats_ref.get('count', 0),
+                    'sum': self.aggregated_stats_ref.get('sum', 0),
+                    'sum_sq': self.aggregated_stats_ref.get('sum_sq', 0),
+                    'min': self.aggregated_stats_ref.get('min', float('inf')),
+                    'max': self.aggregated_stats_ref.get('max', float('-inf'))
+                }
+                if agg_data['count'] > 0:
+                    self.latency_tracker.add_aggregated_stats(agg_data)
+                    # Also add to throughput tracker
+                    self.throughput_tracker.add_aggregated_stats(agg_data['count'], self.duration)
+                    logger.info("Ingested %d aggregated samples from Node-RED", agg_data['count'])
+            except Exception as e:
+                logger.error("Failed to ingest aggregated stats: %s", e)
 
         latency_stats = self.latency_tracker.get_stats()
         throughput_stats = self.throughput_tracker.get_stats()

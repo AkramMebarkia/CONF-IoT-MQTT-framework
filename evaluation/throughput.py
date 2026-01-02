@@ -14,6 +14,11 @@ class FixedThroughputTracker:
         self.unique_publisher_messages = set()  # Store (publisher_name, seq_id) tuples
         self.publisher_timestamps = deque(maxlen=window_size * 100)
         self.publisher_rates = deque(maxlen=60)  # Store per-second rates
+        
+        # Aggregated stats support (for Node-RED aggregation mode)
+        self.agg_count = 0
+        self.agg_start_time = None
+        self.agg_end_time = None
 
     def record_delay_message(self, delay_payload):
         """Record a delay message and extract publisher info"""
@@ -61,7 +66,25 @@ class FixedThroughputTracker:
         self.unique_publisher_messages.clear()
         self.publisher_timestamps.clear()
         self.publisher_rates.clear()
+        # Reset aggregated stats
+        self.agg_count = 0
+        self.agg_start_time = None
+        self.agg_end_time = None
         logger.info("Throughput tracker reset")
+
+    def add_aggregated_stats(self, count, duration):
+        """
+        Add aggregated throughput data from Node-RED.
+        
+        Args:
+            count: Total message count from aggregated stats
+            duration: Duration of the evaluation in seconds
+        """
+        self.agg_count = count
+        if duration > 0:
+            self.agg_start_time = time.time() - duration
+            self.agg_end_time = time.time()
+        logger.info("Added aggregated throughput: %d msgs over %.1fs", count, duration)
 
     def get_publisher_throughput(self, duration=None):
         """Calculate throughput based on unique publisher messages"""
@@ -139,6 +162,11 @@ class FixedThroughputTracker:
         delay_count = len(self.timestamps)
         unique_count = len(self.unique_publisher_messages)
         
+        # Use aggregated count if no individual messages were tracked
+        if delay_count == 0 and self.agg_count > 0:
+            delay_count = self.agg_count
+            unique_count = self.agg_count  # Approximate
+        
         # Calculate durations
         duration = 0.0
         if self.publisher_timestamps and len(self.publisher_timestamps) >= 2:
@@ -147,10 +175,18 @@ class FixedThroughputTracker:
         elif self.timestamps and len(self.timestamps) >= 2:
             timestamps_list = list(self.timestamps)
             duration = timestamps_list[-1] - timestamps_list[0]
+        elif self.agg_start_time and self.agg_end_time:
+            # Use aggregated duration
+            duration = self.agg_end_time - self.agg_start_time
         
         # Get throughput rates
         delay_throughput = self.get_throughput()
         publisher_throughput = self.get_publisher_throughput()
+        
+        # Calculate from aggregated data if individual tracking is empty
+        if delay_throughput == 0 and self.agg_count > 0 and duration > 0:
+            delay_throughput = round(self.agg_count / duration, 2)
+            publisher_throughput = delay_throughput
         
         # Calculate expected vs actual if we have unique messages
         efficiency = 0.0
@@ -165,11 +201,12 @@ class FixedThroughputTracker:
             "publisher_throughput_mps": publisher_throughput,
             "duration": round(duration, 2),
             "subscriber_multiplication_factor": efficiency,
-            "start_time": self.start_time,
-            "end_time": time.time() if self.start_time else None
+            "start_time": self.start_time or self.agg_start_time,
+            "end_time": time.time() if self.start_time else self.agg_end_time,
+            "aggregated_mode": self.agg_count > 0 and len(self.timestamps) == 0
         }
         
         logger.debug("Final stats: %d unique msgs, %d delay msgs, factor=%.2fx, rate=%.2f msg/s",
-                    unique_count, delay_count, efficiency, publisher_throughput)
+                    unique_count, delay_count, efficiency, delay_throughput)
         
         return stats

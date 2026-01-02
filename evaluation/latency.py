@@ -8,10 +8,12 @@ logger = logging.getLogger(__name__)
 
 class EnhancedLatencyTracker:
     """
-    Enhanced latency tracker with stratified sampling and better statistics
+    Enhanced latency tracker with stratified sampling and better statistics.
+    Supports both raw per-message tracking and aggregated stats from Node-RED.
     """
 
     def __init__(self):
+        # Raw per-message tracking (legacy mode)
         self.delays = deque()
         self.timestamps = deque()
         self.processed_count = 0
@@ -27,6 +29,14 @@ class EnhancedLatencyTracker:
         
         # QoS 2 deduplication: track (publisher, seq_id, subscriber) to detect retries
         self.seen_deliveries = set()
+        
+        # Aggregated stats tracking (optimized mode)
+        self.agg_count = 0
+        self.agg_sum = 0.0
+        self.agg_sum_sq = 0.0
+        self.agg_min = float('inf')
+        self.agg_max = float('-inf')
+        self.agg_windows = 0
         
         self.last_update = time.time()
 
@@ -100,6 +110,7 @@ class EnhancedLatencyTracker:
 
     def reset(self):
         """Reset all collected data for fresh start after warm-up"""
+        # Reset raw tracking
         self.delays.clear()
         self.timestamps.clear()
         self.processed_count = 0
@@ -111,8 +122,49 @@ class EnhancedLatencyTracker:
         self.unique_messages.clear()
         self.publisher_message_count.clear()
         self.seen_deliveries.clear()
+        
+        # Reset aggregated stats
+        self.agg_count = 0
+        self.agg_sum = 0.0
+        self.agg_sum_sq = 0.0
+        self.agg_min = float('inf')
+        self.agg_max = float('-inf')
+        self.agg_windows = 0
+        
         self.last_update = time.time()
         logger.info("Latency tracker reset")
+
+    def add_aggregated_stats(self, stats: dict):
+        """
+        Add pre-aggregated statistics from Node-RED.
+        Used for memory-efficient tracking at scale.
+        
+        Args:
+            stats: dict with keys: count, sum, sum_sq, min, max
+        """
+        try:
+            count = int(stats.get('count', 0))
+            if count == 0:
+                return
+            
+            self.agg_count += count
+            self.agg_sum += float(stats.get('sum', 0))
+            self.agg_sum_sq += float(stats.get('sum_sq', 0))
+            
+            new_min = float(stats.get('min', float('inf')))
+            new_max = float(stats.get('max', float('-inf')))
+            
+            if new_min < self.agg_min:
+                self.agg_min = new_min
+            if new_max > self.agg_max:
+                self.agg_max = new_max
+            
+            self.agg_windows += 1
+            self.last_update = time.time()
+            
+        except Exception as e:
+            self.error_count += 1
+            logger.error("Error adding aggregated stats: %s", e)
 
     def _calculate_percentiles(self, delays_list):
         """Calculate P50, P95, P99 percentiles with proper interpolation"""
@@ -183,9 +235,10 @@ class EnhancedLatencyTracker:
     def get_stats(self):
         """Compute and return comprehensive latency statistics"""
         total = len(self.delays)
-        print(f"[LatencyTracker] Generating stats for {total} samples, {len(self.unique_messages)} unique messages...")
+        print(f"[LatencyTracker] Generating stats for {total} raw samples, {self.agg_count} aggregated samples...")
 
-        if total == 0:
+        # If no raw data but we have aggregated data, return aggregated stats
+        if total == 0 and self.agg_count == 0:
             return {
                 "count": 0,
                 "processed_count": self.processed_count,
@@ -200,7 +253,43 @@ class EnhancedLatencyTracker:
                 "p95": 0.0,
                 "p99": 0.0,
                 "publisher_breakdown": {},
-                "stratified_stats": {}
+                "stratified_stats": {},
+                "aggregated_stats": None
+            }
+
+        # Calculate aggregated statistics if available
+        agg_stats = None
+        if self.agg_count > 0:
+            agg_mean = self.agg_sum / self.agg_count
+            agg_variance = (self.agg_sum_sq / self.agg_count) - (agg_mean * agg_mean)
+            agg_stddev = agg_variance ** 0.5 if agg_variance > 0 else 0
+            agg_stats = {
+                "count": self.agg_count,
+                "mean": round(agg_mean, 2),
+                "min": round(self.agg_min, 2) if self.agg_min != float('inf') else 0,
+                "max": round(self.agg_max, 2) if self.agg_max != float('-inf') else 0,
+                "stddev": round(agg_stddev, 2),
+                "windows_received": self.agg_windows
+            }
+
+        # If we only have aggregated data (no raw), return aggregated results
+        if total == 0:
+            return {
+                "count": self.agg_count,
+                "processed_count": self.agg_count,
+                "error_count": self.error_count,
+                "error_rate": 0.0,
+                "unique_publisher_messages": 0,
+                "avg_delay": agg_stats["mean"] if agg_stats else 0.0,
+                "min_delay": agg_stats["min"] if agg_stats else 0.0,
+                "max_delay": agg_stats["max"] if agg_stats else 0.0,
+                "jitter": agg_stats["stddev"] if agg_stats else 0.0,
+                "p50": agg_stats["mean"] if agg_stats else 0.0,  # Approximate
+                "p95": 0.0,  # Cannot calculate from aggregates
+                "p99": 0.0,  # Cannot calculate from aggregates
+                "publisher_breakdown": {},
+                "stratified_stats": {},
+                "aggregated_stats": agg_stats
             }
 
         delays_list = list(self.delays)
@@ -224,7 +313,8 @@ class EnhancedLatencyTracker:
                 "p95": p95,
                 "p99": p99,
                 "publisher_breakdown": dict(self.publisher_message_count),
-                "stratified_stats": self.get_stratified_stats()
+                "stratified_stats": self.get_stratified_stats(),
+                "aggregated_stats": agg_stats
             }
 
             print(
@@ -251,5 +341,6 @@ class EnhancedLatencyTracker:
                 "p95": 0.0,
                 "p99": 0.0,
                 "publisher_breakdown": dict(self.publisher_message_count),
-                "stratified_stats": {}
+                "stratified_stats": {},
+                "aggregated_stats": agg_stats
             }

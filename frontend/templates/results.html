@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Simulation Results - {{ broker_name }}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -10,26 +11,38 @@
       border-radius: 10px;
       padding: 20px;
       margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
+
     .metric-value {
       font-size: 2rem;
       font-weight: bold;
       color: #0066cc;
     }
+
     .metric-label {
       color: #666;
       font-size: 0.9rem;
     }
+
     .chart-container {
       position: relative;
       height: 300px;
       margin-bottom: 30px;
     }
-    .status-good { color: #28a745; }
-    .status-warning { color: #ffc107; }
-    .status-bad { color: #dc3545; }
-    
+
+    .status-good {
+      color: #28a745;
+    }
+
+    .status-warning {
+      color: #ffc107;
+    }
+
+    .status-bad {
+      color: #dc3545;
+    }
+
     .metrics-enhancement {
       background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
       border-radius: 10px;
@@ -37,29 +50,29 @@
       margin: 20px 0;
       border-left: 4px solid #2196f3;
     }
-    
+
     .enhanced-metric {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 8px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
     }
-    
+
     .enhanced-metric:last-child {
       border-bottom: none;
     }
-    
+
     .enhanced-metric-label {
       font-weight: 500;
       color: #1976d2;
     }
-    
+
     .enhanced-metric-value {
       font-weight: bold;
       color: #0d47a1;
     }
-    
+
     .percentile-highlight {
       background: rgba(76, 175, 80, 0.1);
       border-radius: 6px;
@@ -67,6 +80,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container py-4">
     <div class="row mb-4">
@@ -93,7 +107,8 @@
       </div>
       <div class="col-md-3">
         <div class="metric-card text-center">
-          <div class="metric-value">{{ stats.throughput_publisher_throughput_mps or stats.throughput_throughput_mps or 0 }}</div>
+          <div class="metric-value">{{ stats.throughput_publisher_throughput_mps or stats.throughput_throughput_mps or 0
+            }}</div>
           <div class="metric-label">Messages/sec</div>
         </div>
       </div>
@@ -110,7 +125,7 @@
     {% if stats.latency_unique_publisher_messages or stats.latency_p50 or stats.latency_p95 or stats.latency_p99 %}
     <div class="metrics-enhancement">
       <h5 class="mb-3">Metrics Analysis</h5>
-      
+
       <div class="row">
         <div class="col-md-6">
           <h6>Message Flow Accuracy</h6>
@@ -125,11 +140,12 @@
           </div>
           <div class="enhanced-metric">
             <span class="enhanced-metric-label">Subscriber Multiplier:</span>
-            <span class="enhanced-metric-value">{{ "%.1f"|format((stats.latency_count or 0) / (stats.latency_unique_publisher_messages or 1)) }}x</span>
+            <span class="enhanced-metric-value">{{ "%.1f"|format((stats.latency_count or 0) /
+              (stats.latency_unique_publisher_messages or 1)) }}x</span>
           </div>
           {% endif %}
         </div>
-        
+
         <div class="col-md-6">
           <h6>Latency Distribution</h6>
           {% if stats.latency_p50 or stats.latency_p95 or stats.latency_p99 %}
@@ -170,7 +186,8 @@
               </tr>
               <tr>
                 <td>Min / Max Delay</td>
-                <td class="text-end"><strong>{{ stats.latency_min_delay or 0 }} / {{ stats.latency_max_delay or 0 }} ms</strong></td>
+                <td class="text-end"><strong>{{ stats.latency_min_delay or 0 }} / {{ stats.latency_max_delay or 0 }}
+                    ms</strong></td>
               </tr>
               <tr>
                 <td>Jitter (StdDev)</td>
@@ -190,7 +207,8 @@
               </tr>
               <tr>
                 <td>Error Rate</td>
-                <td class="text-end"><strong>{{ "%.2f"|format(((stats.latency_error_count or 0) / (stats.latency_processed_count or 1)) * 100) }}%</strong></td>
+                <td class="text-end"><strong>{{ "%.2f"|format(((stats.latency_error_count or 0) /
+                    (stats.latency_processed_count or 1)) * 100) }}%</strong></td>
               </tr>
             </table>
           </div>
@@ -210,7 +228,9 @@
               </tr>
               <tr>
                 <td>Failures</td>
-                <td class="text-end"><strong class="{% if stats.availability_failures == 0 %}status-good{% else %}status-bad{% endif %}">{{ stats.availability_failures or 0 }}</strong></td>
+                <td class="text-end"><strong
+                    class="{% if stats.availability_failures == 0 %}status-good{% else %}status-bad{% endif %}">{{
+                    stats.availability_failures or 0 }}</strong></td>
               </tr>
               <tr>
                 <td>Recoveries</td>
@@ -339,7 +359,7 @@
 
   <script>
     const resourceData = {{ resource_data | safe }};
-    
+
     // Prepare data
     const labels = resourceData.map(d => {
       const date = new Date(d.timestamp);
@@ -357,9 +377,9 @@
     const netRx = [];
     const netTx = [];
     for (let i = 1; i < resourceData.length; i++) {
-      const timeDiff = (new Date(resourceData[i].timestamp) - new Date(resourceData[i-1].timestamp)) / 1000;
-      const rxDiff = (parseFloat(resourceData[i].net_rx) - parseFloat(resourceData[i-1].net_rx)) / 1024 / 1024;
-      const txDiff = (parseFloat(resourceData[i].net_tx) - parseFloat(resourceData[i-1].net_tx)) / 1024 / 1024;
+      const timeDiff = (new Date(resourceData[i].timestamp) - new Date(resourceData[i - 1].timestamp)) / 1000;
+      const rxDiff = (parseFloat(resourceData[i].net_rx) - parseFloat(resourceData[i - 1].net_rx)) / 1024 / 1024;
+      const txDiff = (parseFloat(resourceData[i].net_tx) - parseFloat(resourceData[i - 1].net_tx)) / 1024 / 1024;
       netRx.push((rxDiff / timeDiff).toFixed(2));
       netTx.push((txDiff / timeDiff).toFixed(2));
     }
@@ -368,9 +388,9 @@
     const diskRead = [];
     const diskWrite = [];
     for (let i = 1; i < resourceData.length; i++) {
-      const timeDiff = (new Date(resourceData[i].timestamp) - new Date(resourceData[i-1].timestamp)) / 1000;
-      const readDiff = (parseFloat(resourceData[i].block_read) - parseFloat(resourceData[i-1].block_read)) / 1024 / 1024;
-      const writeDiff = (parseFloat(resourceData[i].block_write) - parseFloat(resourceData[i-1].block_write)) / 1024 / 1024;
+      const timeDiff = (new Date(resourceData[i].timestamp) - new Date(resourceData[i - 1].timestamp)) / 1000;
+      const readDiff = (parseFloat(resourceData[i].block_read) - parseFloat(resourceData[i - 1].block_read)) / 1024 / 1024;
+      const writeDiff = (parseFloat(resourceData[i].block_write) - parseFloat(resourceData[i - 1].block_write)) / 1024 / 1024;
       diskRead.push((readDiff / timeDiff).toFixed(2));
       diskWrite.push((writeDiff / timeDiff).toFixed(2));
     }
@@ -468,4 +488,5 @@
     });
   </script>
 </body>
+
 </html>
