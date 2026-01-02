@@ -1,0 +1,1000 @@
+{
+  "job_id": "c5899651748047958f4db2e78d59cc0f",
+  "broker_name": "10.22.110.12",
+  "timestamp": "2026-01-01T19:28:44.103919",
+  "latency_count": 100000,
+  "latency_processed_count": 100000,
+  "latency_error_count": 0,
+  "latency_error_rate": 0.0,
+  "latency_unique_publisher_messages": 5000,
+  "latency_avg_delay": 1093.63,
+  "latency_min_delay": 535.0,
+  "latency_max_delay": 3161.0,
+  "latency_jitter": 469.94,
+  "latency_p50": 953.0,
+  "latency_p95": 2108.0,
+  "latency_p99": 2688.0,
+  "latency_publisher_breakdown": {
+    "Zone5_PLCs_1": 150,
+    "Zone5_PLCs_2": 150,
+    "Zone5_PLCs_3": 150,
+    "Zone5_PLCs_4": 150,
+    "Zone5_PLCs_5": 150,
+    "Zone5_PLCs_6": 150,
+    "Zone5_PLCs_7": 150,
+    "Zone5_PLCs_8": 150,
+    "Zone5_PLCs_9": 150,
+    "Zone5_PLCs_10": 150,
+    "Zone4_PLCs_2": 150,
+    "Zone4_PLCs_1": 150,
+    "Zone4_PLCs_3": 150,
+    "Zone4_PLCs_4": 150,
+    "Zone4_PLCs_5": 150,
+    "Zone4_PLCs_6": 150,
+    "Zone4_PLCs_7": 150,
+    "Zone4_PLCs_8": 150,
+    "Zone4_PLCs_9": 150,
+    "Zone4_PLCs_10": 150,
+    "Zone3_PLCs_1": 100,
+    "Zone3_PLCs_2": 100,
+    "Zone3_PLCs_3": 100,
+    "Zone3_PLCs_4": 100,
+    "Zone3_PLCs_5": 100,
+    "Zone3_PLCs_6": 100,
+    "Zone3_PLCs_7": 100,
+    "Zone3_PLCs_8": 100,
+    "Zone3_PLCs_9": 100,
+    "Zone3_PLCs_10": 100,
+    "Zone1_PLCs_1": 50,
+    "Zone1_PLCs_2": 50,
+    "Zone1_PLCs_3": 50,
+    "Zone1_PLCs_4": 50,
+    "Zone1_PLCs_5": 50,
+    "Zone1_PLCs_6": 50,
+    "Zone1_PLCs_7": 50,
+    "Zone1_PLCs_8": 50,
+    "Zone1_PLCs_9": 50,
+    "Zone1_PLCs_10": 50,
+    "Zone2_PLCs_1": 50,
+    "Zone2_PLCs_2": 50,
+    "Zone2_PLCs_3": 50,
+    "Zone2_PLCs_4": 50,
+    "Zone2_PLCs_5": 50,
+    "Zone2_PLCs_6": 50,
+    "Zone2_PLCs_7": 50,
+    "Zone2_PLCs_8": 50,
+    "Zone2_PLCs_9": 50,
+    "Zone2_PLCs_10": 50
+  },
+  "latency_stratified_stats": {
+    "by_publisher": {
+      "Zone5_PLCs_1": {
+        "count": 1000,
+        "avg": 1208.37,
+        "min": 812.0,
+        "max": 3090.0,
+        "p50": 917.0,
+        "p95": 2671.0,
+        "p99": 3086.0
+      },
+      "Zone5_PLCs_2": {
+        "count": 1000,
+        "avg": 1213.18,
+        "min": 816.0,
+        "max": 3094.0,
+        "p50": 920.0,
+        "p95": 2680.0,
+        "p99": 3091.0
+      },
+      "Zone5_PLCs_3": {
+        "count": 1000,
+        "avg": 1217.87,
+        "min": 820.0,
+        "max": 3098.0,
+        "p50": 924.0,
+        "p95": 2684.0,
+        "p99": 3096.0
+      },
+      "Zone5_PLCs_4": {
+        "count": 1000,
+        "avg": 1222.52,
+        "min": 824.0,
+        "max": 3107.0,
+        "p50": 928.0,
+        "p95": 2689.0,
+        "p99": 3101.0
+      },
+      "Zone5_PLCs_5": {
+        "count": 1000,
+        "avg": 1227.19,
+        "min": 827.0,
+        "max": 3117.0,
+        "p50": 932.5,
+        "p95": 2693.0,
+        "p99": 3110.0
+      },
+      "Zone5_PLCs_6": {
+        "count": 1000,
+        "avg": 1232.7,
+        "min": 831.0,
+        "max": 3126.0,
+        "p50": 936.5,
+        "p95": 2705.05,
+        "p99": 3120.01
+      },
+      "Zone5_PLCs_7": {
+        "count": 1000,
+        "avg": 1238.07,
+        "min": 835.0,
+        "max": 3134.0,
+        "p50": 940.0,
+        "p95": 2715.0,
+        "p99": 3128.01
+      },
+      "Zone5_PLCs_8": {
+        "count": 1000,
+        "avg": 1243.38,
+        "min": 838.0,
+        "max": 3143.0,
+        "p50": 944.0,
+        "p95": 2725.0,
+        "p99": 3136.0
+      },
+      "Zone5_PLCs_9": {
+        "count": 1000,
+        "avg": 1248.48,
+        "min": 842.0,
+        "max": 3153.0,
+        "p50": 947.0,
+        "p95": 2731.0,
+        "p99": 3147.0
+      },
+      "Zone5_PLCs_10": {
+        "count": 1000,
+        "avg": 1253.56,
+        "min": 845.0,
+        "max": 3161.0,
+        "p50": 950.5,
+        "p95": 2736.0,
+        "p99": 3156.01
+      },
+      "Zone4_PLCs_2": {
+        "count": 1000,
+        "avg": 935.94,
+        "min": 536.0,
+        "max": 2778.0,
+        "p50": 780.5,
+        "p95": 1870.05,
+        "p99": 2559.01
+      },
+      "Zone4_PLCs_1": {
+        "count": 1000,
+        "avg": 1110.91,
+        "min": 658.0,
+        "max": 3016.0,
+        "p50": 949.0,
+        "p95": 2009.05,
+        "p99": 2788.0
+      },
+      "Zone4_PLCs_3": {
+        "count": 1000,
+        "avg": 1115.73,
+        "min": 661.0,
+        "max": 3025.0,
+        "p50": 954.0,
+        "p95": 2013.05,
+        "p99": 2792.01
+      },
+      "Zone4_PLCs_4": {
+        "count": 1000,
+        "avg": 1120.54,
+        "min": 665.0,
+        "max": 3034.0,
+        "p50": 958.5,
+        "p95": 2018.05,
+        "p99": 2797.0
+      },
+      "Zone4_PLCs_5": {
+        "count": 1000,
+        "avg": 1125.39,
+        "min": 669.0,
+        "max": 3043.0,
+        "p50": 963.0,
+        "p95": 2023.05,
+        "p99": 2802.0
+      },
+      "Zone4_PLCs_6": {
+        "count": 1000,
+        "avg": 1130.37,
+        "min": 673.0,
+        "max": 3051.0,
+        "p50": 968.0,
+        "p95": 2027.05,
+        "p99": 2811.01
+      },
+      "Zone4_PLCs_7": {
+        "count": 1000,
+        "avg": 1134.87,
+        "min": 677.0,
+        "max": 3060.0,
+        "p50": 972.5,
+        "p95": 2030.05,
+        "p99": 2821.01
+      },
+      "Zone4_PLCs_8": {
+        "count": 1000,
+        "avg": 1139.82,
+        "min": 681.0,
+        "max": 3068.0,
+        "p50": 977.5,
+        "p95": 2045.05,
+        "p99": 2829.01
+      },
+      "Zone4_PLCs_9": {
+        "count": 1000,
+        "avg": 1144.72,
+        "min": 684.0,
+        "max": 3076.0,
+        "p50": 981.5,
+        "p95": 2049.05,
+        "p99": 2837.0
+      },
+      "Zone4_PLCs_10": {
+        "count": 1000,
+        "avg": 1149.41,
+        "min": 690.0,
+        "max": 3083.0,
+        "p50": 987.0,
+        "p95": 2053.05,
+        "p99": 2845.0
+      },
+      "Zone3_PLCs_1": {
+        "count": 450,
+        "avg": 1016.08,
+        "min": 614.0,
+        "max": 2366.0,
+        "p50": 973.0,
+        "p95": 2028.0,
+        "p99": 2333.51
+      },
+      "Zone3_PLCs_2": {
+        "count": 450,
+        "avg": 1020.78,
+        "min": 618.0,
+        "max": 2372.0,
+        "p50": 978.0,
+        "p95": 2033.0,
+        "p99": 2339.0
+      },
+      "Zone3_PLCs_3": {
+        "count": 450,
+        "avg": 1025.43,
+        "min": 622.0,
+        "max": 2377.0,
+        "p50": 982.0,
+        "p95": 2037.55,
+        "p99": 2343.0
+      },
+      "Zone3_PLCs_4": {
+        "count": 450,
+        "avg": 1030.54,
+        "min": 625.0,
+        "max": 2381.0,
+        "p50": 987.0,
+        "p95": 2043.55,
+        "p99": 2350.0
+      },
+      "Zone3_PLCs_5": {
+        "count": 450,
+        "avg": 1035.25,
+        "min": 629.0,
+        "max": 2385.0,
+        "p50": 992.5,
+        "p95": 2048.0,
+        "p99": 2354.0
+      },
+      "Zone3_PLCs_6": {
+        "count": 450,
+        "avg": 1039.95,
+        "min": 633.0,
+        "max": 2389.0,
+        "p50": 998.0,
+        "p95": 2051.0,
+        "p99": 2358.0
+      },
+      "Zone3_PLCs_7": {
+        "count": 450,
+        "avg": 1044.46,
+        "min": 637.0,
+        "max": 2395.0,
+        "p50": 1002.0,
+        "p95": 2056.0,
+        "p99": 2362.51
+      },
+      "Zone3_PLCs_8": {
+        "count": 450,
+        "avg": 1049.09,
+        "min": 641.0,
+        "max": 2399.0,
+        "p50": 1007.0,
+        "p95": 2061.0,
+        "p99": 2368.51
+      },
+      "Zone3_PLCs_9": {
+        "count": 450,
+        "avg": 1053.66,
+        "min": 645.0,
+        "max": 2404.0,
+        "p50": 1012.0,
+        "p95": 2065.55,
+        "p99": 2373.0
+      },
+      "Zone3_PLCs_10": {
+        "count": 450,
+        "avg": 1058.48,
+        "min": 649.0,
+        "max": 2410.0,
+        "p50": 1017.0,
+        "p95": 2070.55,
+        "p99": 2377.0
+      },
+      "Zone1_PLCs_1": {
+        "count": 400,
+        "avg": 900.4,
+        "min": 541.0,
+        "max": 2240.0,
+        "p50": 846.0,
+        "p95": 2012.0,
+        "p99": 2239.0
+      },
+      "Zone1_PLCs_2": {
+        "count": 400,
+        "avg": 905.52,
+        "min": 545.0,
+        "max": 2248.0,
+        "p50": 852.0,
+        "p95": 2017.0,
+        "p99": 2247.0
+      },
+      "Zone1_PLCs_3": {
+        "count": 400,
+        "avg": 910.36,
+        "min": 549.0,
+        "max": 2254.0,
+        "p50": 859.5,
+        "p95": 2022.0,
+        "p99": 2253.0
+      },
+      "Zone1_PLCs_4": {
+        "count": 400,
+        "avg": 921.82,
+        "min": 552.0,
+        "max": 2262.0,
+        "p50": 866.5,
+        "p95": 2028.0,
+        "p99": 2262.0
+      },
+      "Zone1_PLCs_5": {
+        "count": 400,
+        "avg": 927.22,
+        "min": 556.0,
+        "max": 2267.0,
+        "p50": 874.0,
+        "p95": 2033.0,
+        "p99": 2266.0
+      },
+      "Zone1_PLCs_6": {
+        "count": 400,
+        "avg": 932.01,
+        "min": 560.0,
+        "max": 2274.0,
+        "p50": 880.0,
+        "p95": 2037.0,
+        "p99": 2274.0
+      },
+      "Zone1_PLCs_7": {
+        "count": 400,
+        "avg": 937.14,
+        "min": 563.0,
+        "max": 2283.0,
+        "p50": 886.0,
+        "p95": 2042.0,
+        "p99": 2282.0
+      },
+      "Zone1_PLCs_8": {
+        "count": 400,
+        "avg": 941.94,
+        "min": 567.0,
+        "max": 2288.0,
+        "p50": 893.0,
+        "p95": 2046.0,
+        "p99": 2288.0
+      },
+      "Zone1_PLCs_9": {
+        "count": 400,
+        "avg": 946.79,
+        "min": 571.0,
+        "max": 2293.0,
+        "p50": 898.0,
+        "p95": 2051.0,
+        "p99": 2292.0
+      },
+      "Zone1_PLCs_10": {
+        "count": 400,
+        "avg": 951.5,
+        "min": 574.0,
+        "max": 2299.0,
+        "p50": 904.5,
+        "p95": 2056.0,
+        "p99": 2298.0
+      },
+      "Zone2_PLCs_1": {
+        "count": 1000,
+        "avg": 953.38,
+        "min": 575.0,
+        "max": 2302.0,
+        "p50": 908.0,
+        "p95": 2057.0,
+        "p99": 2301.0
+      },
+      "Zone2_PLCs_2": {
+        "count": 1000,
+        "avg": 958.48,
+        "min": 579.0,
+        "max": 2307.0,
+        "p50": 914.0,
+        "p95": 2063.0,
+        "p99": 2307.0
+      },
+      "Zone2_PLCs_3": {
+        "count": 1000,
+        "avg": 963.78,
+        "min": 583.0,
+        "max": 2314.0,
+        "p50": 920.0,
+        "p95": 2068.0,
+        "p99": 2312.0
+      },
+      "Zone2_PLCs_4": {
+        "count": 1000,
+        "avg": 968.94,
+        "min": 586.0,
+        "max": 2320.0,
+        "p50": 926.5,
+        "p95": 2073.0,
+        "p99": 2319.0
+      },
+      "Zone2_PLCs_5": {
+        "count": 1000,
+        "avg": 973.79,
+        "min": 590.0,
+        "max": 2324.0,
+        "p50": 931.5,
+        "p95": 2077.0,
+        "p99": 2324.0
+      },
+      "Zone2_PLCs_6": {
+        "count": 1000,
+        "avg": 978.69,
+        "min": 593.0,
+        "max": 2331.0,
+        "p50": 937.5,
+        "p95": 2082.0,
+        "p99": 2330.0
+      },
+      "Zone2_PLCs_7": {
+        "count": 1000,
+        "avg": 983.77,
+        "min": 597.0,
+        "max": 2339.0,
+        "p50": 943.0,
+        "p95": 2086.0,
+        "p99": 2338.0
+      },
+      "Zone2_PLCs_8": {
+        "count": 1000,
+        "avg": 988.42,
+        "min": 601.0,
+        "max": 2344.0,
+        "p50": 949.0,
+        "p95": 2091.0,
+        "p99": 2342.0
+      },
+      "Zone2_PLCs_9": {
+        "count": 1000,
+        "avg": 993.34,
+        "min": 604.0,
+        "max": 2350.0,
+        "p50": 956.0,
+        "p95": 2096.0,
+        "p99": 2349.0
+      },
+      "Zone2_PLCs_10": {
+        "count": 1000,
+        "avg": 998.43,
+        "min": 608.0,
+        "max": 2354.0,
+        "p50": 961.5,
+        "p95": 2102.0,
+        "p99": 2353.01
+      }
+    },
+    "by_topic": {
+      "scada/zone5/plc": {
+        "count": 1000,
+        "avg": 1228.59,
+        "p50": 933.5,
+        "p95": 2692.55
+      },
+      "scada/zone4/plc": {
+        "count": 1000,
+        "avg": 1161.62,
+        "p50": 893.5,
+        "p95": 2630.1
+      },
+      "scada/zone3/plc": {
+        "count": 1000,
+        "avg": 1045.44,
+        "p50": 990.0,
+        "p95": 1988.15
+      },
+      "scada/zone1/plc": {
+        "count": 1000,
+        "avg": 927.74,
+        "p50": 868.0,
+        "p95": 2033.2
+      },
+      "scada/zone2/plc": {
+        "count": 1000,
+        "avg": 976.06,
+        "p50": 927.0,
+        "p95": 2078.15
+      }
+    },
+    "by_subscriber": {
+      "Zone5_HMIs_16": {
+        "count": 1000,
+        "avg": 1179.17
+      },
+      "Historian_6": {
+        "count": 1000,
+        "avg": 1197.95
+      },
+      "Zone5_HMIs_2": {
+        "count": 1000,
+        "avg": 1178.44
+      },
+      "Zone4_HMIs_12": {
+        "count": 1000,
+        "avg": 1114.0
+      },
+      "Zone5_HMIs_1": {
+        "count": 500,
+        "avg": 1228.15
+      },
+      "Zone5_HMIs_6": {
+        "count": 500,
+        "avg": 1228.42
+      },
+      "Historian_1": {
+        "count": 1000,
+        "avg": 1182.22
+      },
+      "CentralSCADA_13": {
+        "count": 1000,
+        "avg": 1180.13
+      },
+      "Zone4_HMIs_18": {
+        "count": 500,
+        "avg": 1160.13
+      },
+      "CentralSCADA_11": {
+        "count": 1000,
+        "avg": 1149.54
+      },
+      "CentralSCADA_43": {
+        "count": 500,
+        "avg": 1231.71
+      },
+      "CentralSCADA_50": {
+        "count": 1000,
+        "avg": 1147.65
+      },
+      "CentralSCADA_47": {
+        "count": 1000,
+        "avg": 1197.44
+      },
+      "CentralSCADA_38": {
+        "count": 1000,
+        "avg": 1150.96
+      },
+      "Historian_16": {
+        "count": 1000,
+        "avg": 1174.68
+      },
+      "Historian_9": {
+        "count": 1000,
+        "avg": 1139.07
+      },
+      "Historian_15": {
+        "count": 1000,
+        "avg": 1198.43
+      },
+      "CentralSCADA_37": {
+        "count": 1000,
+        "avg": 1138.61
+      },
+      "Zone5_HMIs_15": {
+        "count": 1000,
+        "avg": 1179.12
+      },
+      "Zone5_HMIs_19": {
+        "count": 1000,
+        "avg": 1179.33
+      },
+      "Zone5_HMIs_10": {
+        "count": 1000,
+        "avg": 1178.85
+      },
+      "Zone5_HMIs_20": {
+        "count": 500,
+        "avg": 1229.19
+      },
+      "CentralSCADA_32": {
+        "count": 500,
+        "avg": 1162.12
+      },
+      "Historian_14": {
+        "count": 1000,
+        "avg": 1182.88
+      },
+      "Historian_20": {
+        "count": 1000,
+        "avg": 1152.67
+      },
+      "Zone5_HMIs_13": {
+        "count": 1000,
+        "avg": 1179.02
+      },
+      "CentralSCADA_17": {
+        "count": 1000,
+        "avg": 1180.35
+      },
+      "CentralSCADA_26": {
+        "count": 500,
+        "avg": 1161.68
+      },
+      "CentralSCADA_42": {
+        "count": 1000,
+        "avg": 1181.72
+      },
+      "CentralSCADA_39": {
+        "count": 500,
+        "avg": 1231.51
+      },
+      "Historian_12": {
+        "count": 1000,
+        "avg": 1182.78
+      },
+      "Historian_7": {
+        "count": 1000,
+        "avg": 1138.94
+      },
+      "CentralSCADA_7": {
+        "count": 1000,
+        "avg": 1103.09
+      },
+      "Historian_11": {
+        "count": 1000,
+        "avg": 1182.72
+      },
+      "Zone5_HMIs_4": {
+        "count": 500,
+        "avg": 1228.33
+      },
+      "Zone5_HMIs_14": {
+        "count": 500,
+        "avg": 1228.87
+      },
+      "CentralSCADA_18": {
+        "count": 1000,
+        "avg": 1180.39
+      },
+      "CentralSCADA_35": {
+        "count": 500,
+        "avg": 1067.57
+      },
+      "Zone4_HMIs_4": {
+        "count": 500,
+        "avg": 1067.76
+      },
+      "CentralSCADA_14": {
+        "count": 1000,
+        "avg": 1023.15
+      },
+      "CentralSCADA_45": {
+        "count": 1000,
+        "avg": 1088.36
+      },
+      "CentralSCADA_29": {
+        "count": 1000,
+        "avg": 1100.58
+      },
+      "Zone4_HMIs_9": {
+        "count": 500,
+        "avg": 1068.07
+      },
+      "CentralSCADA_49": {
+        "count": 1000,
+        "avg": 1058.02
+      },
+      "CentralSCADA_10": {
+        "count": 1000,
+        "avg": 1099.64
+      },
+      "Zone4_HMIs_16": {
+        "count": 500,
+        "avg": 1068.41
+      },
+      "Zone4_HMIs_8": {
+        "count": 500,
+        "avg": 1067.99
+      },
+      "CentralSCADA_12": {
+        "count": 1000,
+        "avg": 1098.85
+      },
+      "Zone4_HMIs_15": {
+        "count": 500,
+        "avg": 1068.37
+      },
+      "Zone4_HMIs_3": {
+        "count": 500,
+        "avg": 1067.7
+      },
+      "CentralSCADA_31": {
+        "count": 1000,
+        "avg": 1100.69
+      },
+      "CentralSCADA_6": {
+        "count": 1000,
+        "avg": 1022.73
+      },
+      "Zone4_HMIs_11": {
+        "count": 500,
+        "avg": 1068.18
+      },
+      "CentralSCADA_21": {
+        "count": 500,
+        "avg": 1130.71
+      },
+      "Historian_3": {
+        "count": 500,
+        "avg": 1132.34
+      },
+      "CentralSCADA_23": {
+        "count": 500,
+        "avg": 1130.81
+      },
+      "Zone5_HMIs_9": {
+        "count": 500,
+        "avg": 1129.0
+      },
+      "CentralSCADA_25": {
+        "count": 500,
+        "avg": 1130.91
+      },
+      "CentralSCADA_48": {
+        "count": 1000,
+        "avg": 1101.53
+      },
+      "Historian_8": {
+        "count": 1000,
+        "avg": 1102.03
+      },
+      "CentralSCADA_8": {
+        "count": 1000,
+        "avg": 1022.84
+      },
+      "Historian_4": {
+        "count": 1000,
+        "avg": 1093.52
+      },
+      "Zone4_HMIs_13": {
+        "count": 500,
+        "avg": 1068.29
+      },
+      "CentralSCADA_27": {
+        "count": 500,
+        "avg": 1069.93
+      },
+      "CentralSCADA_15": {
+        "count": 1000,
+        "avg": 1099.88
+      },
+      "Historian_10": {
+        "count": 1000,
+        "avg": 1124.36
+      },
+      "CentralSCADA_28": {
+        "count": 500,
+        "avg": 1131.05
+      },
+      "CentralSCADA_2": {
+        "count": 1000,
+        "avg": 1053.0
+      },
+      "Historian_17": {
+        "count": 1000,
+        "avg": 1124.73
+      },
+      "CentralSCADA_16": {
+        "count": 1000,
+        "avg": 1053.75
+      },
+      "Historian_2": {
+        "count": 1000,
+        "avg": 1029.81
+      },
+      "Zone5_HMIs_12": {
+        "count": 500,
+        "avg": 1129.18
+      },
+      "CentralSCADA_3": {
+        "count": 1000,
+        "avg": 1053.06
+      },
+      "Zone5_HMIs_3": {
+        "count": 500,
+        "avg": 1128.72
+      },
+      "Historian_5": {
+        "count": 1000,
+        "avg": 1029.96
+      },
+      "CentralSCADA_33": {
+        "count": 500,
+        "avg": 1131.33
+      },
+      "Zone5_HMIs_5": {
+        "count": 500,
+        "avg": 1128.81
+      },
+      "Historian_13": {
+        "count": 1000,
+        "avg": 1030.41
+      },
+      "CentralSCADA_19": {
+        "count": 1000,
+        "avg": 1122.28
+      },
+      "Zone2_HMIs_3": {
+        "count": 500,
+        "avg": 975.26
+      },
+      "Zone2_HMIs_19": {
+        "count": 500,
+        "avg": 976.13
+      },
+      "Zone2_HMIs_15": {
+        "count": 500,
+        "avg": 975.92
+      },
+      "Zone2_HMIs_4": {
+        "count": 500,
+        "avg": 975.3
+      },
+      "Zone2_HMIs_13": {
+        "count": 500,
+        "avg": 975.81
+      },
+      "CentralSCADA_4": {
+        "count": 500,
+        "avg": 976.42
+      },
+      "Zone2_HMIs_10": {
+        "count": 500,
+        "avg": 975.63
+      },
+      "Zone2_HMIs_6": {
+        "count": 500,
+        "avg": 975.4
+      },
+      "Zone2_HMIs_20": {
+        "count": 500,
+        "avg": 976.2
+      },
+      "Zone2_HMIs_5": {
+        "count": 500,
+        "avg": 975.35
+      },
+      "Zone2_HMIs_17": {
+        "count": 500,
+        "avg": 976.03
+      },
+      "Zone2_HMIs_9": {
+        "count": 500,
+        "avg": 975.58
+      },
+      "CentralSCADA_1": {
+        "count": 500,
+        "avg": 976.26
+      },
+      "Zone2_HMIs_8": {
+        "count": 500,
+        "avg": 975.52
+      },
+      "CentralSCADA_44": {
+        "count": 500,
+        "avg": 926.93
+      },
+      "CentralSCADA_5": {
+        "count": 500,
+        "avg": 976.46
+      },
+      "Zone2_HMIs_2": {
+        "count": 500,
+        "avg": 975.18
+      },
+      "Zone2_HMIs_14": {
+        "count": 500,
+        "avg": 975.86
+      },
+      "CentralSCADA_9": {
+        "count": 500,
+        "avg": 976.68
+      },
+      "Zone2_HMIs_12": {
+        "count": 500,
+        "avg": 975.76
+      },
+      "Zone2_HMIs_7": {
+        "count": 500,
+        "avg": 975.46
+      },
+      "CentralSCADA_22": {
+        "count": 500,
+        "avg": 1114.07
+      },
+      "CentralSCADA_41": {
+        "count": 1000,
+        "avg": 1084.19
+      },
+      "Zone4_HMIs_10": {
+        "count": 500,
+        "avg": 1050.77
+      },
+      "Zone4_HMIs_17": {
+        "count": 500,
+        "avg": 1051.16
+      },
+      "CentralSCADA_20": {
+        "count": 500,
+        "avg": 1052.32
+      },
+      "Historian_18": {
+        "count": 500,
+        "avg": 1028.21
+      },
+      "CentralSCADA_34": {
+        "count": 500,
+        "avg": 1114.74
+      }
+    }
+  },
+  "throughput_delay_message_count": 6000,
+  "throughput_delay_throughput_mps": 333826.23,
+  "throughput_unique_publisher_messages": 5000,
+  "throughput_publisher_throughput_mps": 123.96,
+  "throughput_duration": 40.33,
+  "throughput_subscriber_multiplication_factor": 1.2,
+  "throughput_start_time": 1767295663.4853246,
+  "throughput_end_time": 1767295724.1034281,
+  "availability_total_checks": 30,
+  "availability_failures": 0,
+  "availability_recoveries": 0,
+  "availability_downtime_events": 0,
+  "availability_avg_downtime_sec": 0.0,
+  "availability_mtbf_sec": 0.0,
+  "availability_mttr_sec": 0.0
+}

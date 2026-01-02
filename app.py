@@ -427,7 +427,8 @@ return {{
         for sub in subs:
             for topic in sub["topics"]:
                 mqtt_in_id = new_id()
-                stats_func_id = new_id()
+                delay_func_id = new_id()
+                http_req_id = new_id()
 
                 all_nodes.extend([
                     {
@@ -441,48 +442,51 @@ return {{
                         "broker": broker_config_id,
                         "x": 100,
                         "y": y,
-                        "wires": [[stats_func_id]]
+                        "wires": [[delay_func_id]]
                     },
                     {
-                        "id": stats_func_id,
+                        "id": delay_func_id,
                         "type": "function",
                         "z": tab_id,
-                        "name": "RunningStats",
-                        "func": """
-// Ultra-efficient running statistics - NO HTTP during test
-// Uses flow-level context for global aggregation
-try {
+                        "name": f"{sub['name']} DelayCalc",
+                        "func": f"""
+const N = {BATCH_SIZE};
+const bufKey = '{sub['name']}_latBuf';
+let buf = context.get(bufKey) || [];
+
+try {{
     const d = JSON.parse(msg.payload);
     const now = Date.now();
-    const delay = now - d.t;
-    
-    // Skip invalid delays
-    if (delay < 0 || delay > 60000) {
+    const latency = now - d.t;
+
+    if (latency < 0 || latency > 60000) {{
         return null;
-    }
-    
-    // Get or initialize running stats
-    var stats = flow.get('latencyStats') || {
-        count: 0,
-        sum: 0,
-        min: Infinity,
-        max: 0
-    };
-    
-    // Update running statistics - O(1) memory
-    stats.count++;
-    stats.sum += delay;
-    stats.min = Math.min(stats.min, delay);
-    stats.max = Math.max(stats.max, delay);
-    
-    flow.set('latencyStats', stats);
-    
-    // No output - no HTTP calls during test!
+    }}
+
+    buf.push({{
+        subscriber: '{sub['name']}',
+        topic: msg.topic,
+        delay: latency,
+        publisher_name: d.p,
+        seq_id: d.s,
+        timestamp: now
+    }});
+    context.set(bufKey, buf);
+
+    if (buf.length >= N) {{
+        msg.url = '{LATENCY_CALLBACK_URL}';
+        msg.method = 'POST';
+        msg.headers = {{ 'Content-Type': 'application/json' }};
+        msg.payload = buf;
+        context.set(bufKey, []);
+        return msg;
+    }}
+
     return null;
-    
-} catch (e) {
+
+}} catch (e) {{
     return null;
-}
+}}
 """,
                         "outputs": 1,
                         "noerr": 0,
@@ -491,10 +495,30 @@ try {
                         "libs": [],
                         "x": 300,
                         "y": y,
-                        "wires": [[]]  # No wires - no HTTP node!
+                        "wires": [[http_req_id]]
+                    },
+                    {
+                        "id": http_req_id,
+                        "type": "http request",
+                        "z": tab_id,
+                        "name": "Send Latency",
+                        "method": "POST",
+                        "ret": "txt",
+                        "paytoqs": "ignore",
+                        "url": "",
+                        "tls": "",
+                        "persist": False,
+                        "proxy": "",
+                        "insecureHTTPParser": False,
+                        "authType": "",
+                        "senderr": False,
+                        "headers": [],
+                        "x": 500,
+                        "y": y,
+                        "wires": [[]]
                     }
                 ])
-                y += 60
+                y += 80
 
         try:
             logger.info("Deploying %d nodes to instance %d (%s) - Pubs: %d, Subs: %d", 
@@ -669,91 +693,6 @@ def receive_latency_batch():
         return jsonify(error=str(e)), 400
 
 
-def collect_nodered_stats():
-    """Fetch running latency stats from all Node-RED instances"""
-    aggregated_stats = {
-        'count': 0,
-        'sum': 0,
-        'min': float('inf'),
-        'max': 0
-    }
-    
-    for instance_url in NODE_RED_INSTANCES:
-        try:
-            # Use Node-RED's context/flow endpoint to get stats
-            # First, we need to inject a trigger to get the stats
-            flows_resp = requests.get(f'{instance_url}/flows', timeout=10)
-            if flows_resp.status_code != 200:
-                continue
-                
-            flows = flows_resp.json()
-            
-            # Find the Sim-AutoFlow tab
-            tab_id = None
-            for node in flows:
-                if node.get('type') == 'tab' and node.get('label') == 'Sim-AutoFlow':
-                    tab_id = node['id']
-                    break
-            
-            if not tab_id:
-                continue
-            
-            # Use Node-RED's context API to get flow context
-            # The stats are stored at flow.latencyStats
-            context_resp = requests.get(
-                f'{instance_url}/flow/{tab_id}/context',
-                timeout=10
-            )
-            
-            if context_resp.status_code == 200:
-                context = context_resp.json()
-                stats = context.get('latencyStats', {})
-                
-                if stats.get('count', 0) > 0:
-                    aggregated_stats['count'] += stats['count']
-                    aggregated_stats['sum'] += stats['sum']
-                    aggregated_stats['min'] = min(aggregated_stats['min'], stats['min'])
-                    aggregated_stats['max'] = max(aggregated_stats['max'], stats['max'])
-                    
-                    logger.info("Collected stats from %s: count=%d, avg=%.2fms",
-                               instance_url, stats['count'], stats['sum']/stats['count'])
-        except Exception as e:
-            logger.warning("Failed to collect stats from %s: %s", instance_url, e)
-    
-    # Calculate average
-    if aggregated_stats['count'] > 0:
-        aggregated_stats['avg'] = aggregated_stats['sum'] / aggregated_stats['count']
-    else:
-        aggregated_stats['avg'] = 0
-        aggregated_stats['min'] = 0
-    
-    return aggregated_stats
-
-
-@app.route('/api/collect_stats', methods=['POST'])
-def api_collect_stats():
-    """API endpoint to collect and return running stats from Node-RED"""
-    stats = collect_nodered_stats()
-    
-    # Also add to delay_data for compatibility with existing evaluation
-    if stats['count'] > 0:
-        delay_data.clear()
-        # Create synthetic records for the evaluation controller
-        for _ in range(min(stats['count'], 1000)):  # Cap at 1000 for memory
-            delay_data.append({
-                'subscriber': 'aggregated',
-                'topic': 'aggregated',
-                'delay': stats['avg'],  # Use average for compatibility
-                'timestamp': time.time()
-            })
-    
-    return jsonify({
-        'ok': True,
-        'stats': stats,
-        'message': f"Collected {stats['count']} samples, avg={stats.get('avg', 0):.2f}ms"
-    })
-
-
 # =============================================================================
 # DOCKER MONITORING FUNCTIONS
 # =============================================================================
@@ -846,21 +785,42 @@ def run_tests_in_background(job_id, args):
         logger.info("Host: %s:%d, Duration: %ds", mqtt_host, broker_port, duration)
 
         container = None
+        container_name = None
+        
         if broker_name in get_docker_broker_names():
+            # Direct container name match
             container = get_broker_container(broker_name)
+            container_name = broker_name
             if not container:
                 job_status[job_id] = {
                     'error': f'Broker container not found: {broker_name}',
                     'status': 'failed'
                 }
                 return
+        else:
+            # When using IP, try to find any running broker container
+            try:
+                client = docker.from_env()
+                for known_broker in get_docker_broker_names():
+                    try:
+                        c = client.containers.get(known_broker)
+                        if c.status == 'running':
+                            container = c
+                            container_name = known_broker
+                            logger.info("Found running broker container: %s", known_broker)
+                            break
+                    except docker.errors.NotFound:
+                        continue
+            except Exception as e:
+                logger.warning("Could not search for Docker containers: %s", e)
 
         resource_csv = None
         stop_event = None
         monitor_thread = None
         
         if container:
-            resource_csv = os.path.join('results', f'resource_usage_{broker_name}_{job_id}.csv')
+            csv_broker_name = container_name or broker_name
+            resource_csv = os.path.join('results', f'resource_usage_{csv_broker_name}_{job_id}.csv')
             stop_event = threading.Event()
             monitor_thread = threading.Thread(
                 target=monitor_container_stats,
@@ -879,14 +839,6 @@ def run_tests_in_background(job_id, args):
         )
         
         eval_results = controller.run()
-        
-        # Collect running stats from Node-RED (new optimized approach)
-        nodered_stats = collect_nodered_stats()
-        if nodered_stats['count'] > 0:
-            eval_results['nodered_stats'] = nodered_stats
-            logger.info("Collected Node-RED running stats: count=%d, avg=%.2fms, min=%.2fms, max=%.2fms",
-                       nodered_stats['count'], nodered_stats['avg'],
-                       nodered_stats['min'], nodered_stats['max'])
         
         if 'error' in eval_results:
             raise Exception(eval_results['error'])
