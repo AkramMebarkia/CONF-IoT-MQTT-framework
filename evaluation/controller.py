@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class EvaluationController:
-    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results", delay_queue=None, warmup_seconds=10, aggregated_stats_ref=None):
+    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results", delay_queue=None, warmup_seconds=10, aggregated_stats_ref=None, aggregated_stats_lock=None):
         self.broker_host = broker_host
         self.broker_port = broker_port
         self.duration = duration
@@ -27,6 +27,7 @@ class EvaluationController:
         self.connection_error = None
         self.delay_queue = delay_queue
         self.aggregated_stats_ref = aggregated_stats_ref  # Reference to global aggregated stats
+        self.aggregated_stats_lock = aggregated_stats_lock # Lock for safe reset
 
         self.latency_tracker = EnhancedLatencyTracker()
         self.throughput_tracker = FixedThroughputTracker()
@@ -86,17 +87,15 @@ class EvaluationController:
             
             self.client.loop_start()
             
-            connect_result = self.client.connect(self.broker_host, self.broker_port, keepalive=60)
-            if connect_result != 0:
-                raise Exception(f"Connect returned error code: {connect_result}")
+            # Connect to broker
+            self.client.connect(self.broker_host, self.broker_port, 60)
+
+            # Subscribe to topics
+            self.client.subscribe("benchmark/#", qos=0)
             
-            connection_timeout = 10
-            for i in range(connection_timeout):
-                if self.connected:
-                    break
-                if self.connection_error:
-                    raise Exception(f"Connection error: {self.connection_error}")
-                logger.info("Waiting for connection... (%d/%d)", i+1, connection_timeout)
+            # Wait for connection
+            start_wait = time.time()
+            while not self.connected and time.time() - start_wait < 10:
                 time.sleep(1)
             
             if not self.connected:
@@ -125,6 +124,18 @@ class EvaluationController:
                 self.latency_tracker.reset()
                 self.throughput_tracker.reset()
                 self.message_count = 0
+                
+                # Critical: Reset aggregated stats (Node-RED) from warmup period
+                if self.aggregated_stats_ref is not None and self.aggregated_stats_lock is not None:
+                    with self.aggregated_stats_lock:
+                        self.aggregated_stats_ref['count'] = 0
+                        self.aggregated_stats_ref['sum'] = 0.0
+                        self.aggregated_stats_ref['sum_sq'] = 0.0
+                        self.aggregated_stats_ref['min'] = float('inf')
+                        self.aggregated_stats_ref['max'] = float('-inf')
+                        self.aggregated_stats_ref['windows_received'] = 0
+                    logger.info("Reset aggregated stats for measurement phase")
+                
                 logger.info("Warm-up complete, starting measurement")
             
         except Exception as e:

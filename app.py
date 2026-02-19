@@ -35,6 +35,7 @@ job_status = {}
 NODE_RED_URL = os.getenv('NODE_RED_URL', 'http://localhost:1880')
 BATCH_SIZE = int(os.getenv('BATCH_SIZE', '500'))
 LATENCY_CALLBACK_URL = os.getenv('LATENCY_CALLBACK_URL', 'http://host.docker.internal:5000/api/latency_batch')
+MQTT_BROKER_HOST = os.getenv('MQTT_BROKER_HOST', 'localhost')
 
 # Multi-instance support
 NODE_RED_INSTANCES_STR = os.getenv('NODE_RED_INSTANCES', '')
@@ -284,7 +285,8 @@ def deploy_simulation():
     publisher_groups = data.get("publisher_groups", [])
     subscriber_groups = data.get("subscriber_groups", []) 
 
-    broker_host = data.get("broker_name", "localhost")
+    broker_name = data.get("broker_name", "localhost")
+    broker_host = MQTT_BROKER_HOST  # Use actual IP so remote Node-RED can reach the broker
     broker_port = int(data.get("broker_port", 1883))
 
     pub_expander = GroupExpander(mode="publisher")
@@ -330,7 +332,7 @@ def deploy_simulation():
         all_nodes.append({
             "id": broker_config_id,
             "type": "mqtt-broker",
-            "name": broker_host,
+            "name": broker_name,
             "broker": broker_host,
             "port": broker_port,
             "clientid": "",
@@ -438,76 +440,69 @@ return {{
         if '/api/latency_stats' not in stats_callback_url:
             stats_callback_url = 'http://host.docker.internal:5000/api/latency_stats'
 
-        # Aggregator Function Node - receives all latency messages and accumulates stats
+        # Aggregator Function Node - receives all latency messages AND timer ticks
+        # OPTIMIZED: Uses regex, local context only, handles flushing internally
         aggregator_func = f"""
-// Centralized Aggregator - accumulates latency statistics
-try {{
-    const d = JSON.parse(msg.payload);
-    const now = Date.now();
-    const latency = now - d.t;
+        // Centralized Aggregator - One node to rule them all
+        const topic = msg.topic;
 
-    // Validate latency
-    if (latency < 0 || latency > 60000) {{
+        // 1. FLUSH LOGIC (Triggered by Timer)
+        if (topic === "flush_stats") {{
+            let stats = context.get('stats');
+            
+            if (!stats || stats.count === 0) return null;
+            
+            // Prepare payload
+            msg.payload = {{
+                count: stats.count,
+                sum: stats.sum,
+                sum_sq: stats.sum_sq,
+                min: (stats.min === 999999) ? 0 : stats.min,
+                max: (stats.max === 0) ? 0 : stats.max,
+                timestamp: Date.now()
+            }};
+            
+            // ATOMIC RESET - Key to fixing the double-counting bug
+            context.set('stats', {{
+                count: 0, sum: 0, sum_sq: 0, min: 999999, max: 0
+            }});
+            
+            return msg;
+        }}
+
+        // 2. AGGREGATION LOGIC (Triggered by MQTT messages)
+        // Captures receive time FIRST
+        const now = Date.now();
+
+        // Use fast string parsing instead of Regex (Micro-optimization)
+        const payload = typeof msg.payload === 'string' ? msg.payload : msg.payload.toString();
+
+        // Assumes format {{\"t\":<timestamp>, ...}} which is standard from publisher
+        const colIndex = payload.indexOf(':');
+        const comIndex = payload.indexOf(',');
+
+        if (colIndex === -1 || comIndex === -1) return null;
+
+        const sendTime = parseInt(payload.substring(colIndex + 1, comIndex), 10);
+        const latency = now - sendTime;
+
+        if (latency < 0 || latency > 60000) return null;
+
+        // Get stats from context (initialize if needed)
+        let stats = context.get('stats') || {{
+            count: 0, sum: 0, sum_sq: 0, min: 999999, max: 0
+        }};
+
+        // Update running statistics
+        stats.count++;
+        stats.sum += latency;
+        stats.sum_sq += latency * latency;
+        if (latency < stats.min) stats.min = latency;
+        if (latency > stats.max) stats.max = latency;
+
+        context.set('stats', stats);
         return null;
-    }}
-
-    // Get or initialize flow-scoped stats
-    let stats = flow.get('latency_stats') || {{
-        count: 0,
-        sum: 0,
-        sum_sq: 0,
-        min: Infinity,
-        max: -Infinity
-    }};
-
-    // Update running statistics
-    stats.count++;
-    stats.sum += latency;
-    stats.sum_sq += latency * latency;
-    stats.min = Math.min(stats.min, latency);
-    stats.max = Math.max(stats.max, latency);
-
-    flow.set('latency_stats', stats);
-    return null; // Don't forward - stats sent by timer
-}} catch (e) {{
-    return null;
-}}
-"""
-
-        # Flush Function Node - triggered by timer, sends aggregated stats
-        flush_func = f"""
-// Flush aggregated stats to backend
-let stats = flow.get('latency_stats');
-
-if (!stats || stats.count === 0) {{
-    return null; // Nothing to send
-}}
-
-// Prepare payload
-msg.payload = {{
-    count: stats.count,
-    sum: stats.sum,
-    sum_sq: stats.sum_sq,
-    min: stats.min === Infinity ? 0 : stats.min,
-    max: stats.max === -Infinity ? 0 : stats.max,
-    timestamp: Date.now()
-}};
-
-msg.url = '{stats_callback_url}';
-msg.method = 'POST';
-msg.headers = {{ 'Content-Type': 'application/json' }};
-
-// Reset stats for next window
-flow.set('latency_stats', {{
-    count: 0,
-    sum: 0,
-    sum_sq: 0,
-    min: Infinity,
-    max: -Infinity
-}});
-
-return msg;
-"""
+        """
 
         # Position for aggregator infrastructure (bottom of flow)
         agg_y = y + 100
@@ -527,39 +522,24 @@ return msg;
                 "libs": [],
                 "x": 400,
                 "y": agg_y,
-                "wires": [[]]  # No output - stats accumulated in flow context
+                "wires": [[http_stats_id]]  # Wire to HTTP Request
             },
             {
                 "id": flush_inject_id,
                 "type": "inject",
                 "z": tab_id,
                 "name": "Stats Timer (1s)",
-                "props": [{"p": "payload"}],
-                "repeat": "1",  # Fire every 1 second
+                "props": [{"p": "payload"}, {"p": "topic", "vt": "str"}],
+                "repeat": "1",
                 "crontab": "",
                 "once": True,
                 "onceDelay": "1",
-                "topic": "",
+                "topic": "flush_stats",  # Topic triggers flush logic
                 "payload": "",
                 "payloadType": "date",
                 "x": 150,
-                "y": agg_y + 80,
-                "wires": [[flush_func_id]]
-            },
-            {
-                "id": flush_func_id,
-                "type": "function",
-                "z": tab_id,
-                "name": "Flush Stats",
-                "func": flush_func,
-                "outputs": 1,
-                "noerr": 0,
-                "initialize": "",
-                "finalize": "",
-                "libs": [],
-                "x": 350,
-                "y": agg_y + 80,
-                "wires": [[http_stats_id]]
+                "y": agg_y,
+                "wires": [[aggregator_id]]  # Wire directly to aggregator
             },
             {
                 "id": http_stats_id,
@@ -569,7 +549,7 @@ return msg;
                 "method": "POST",
                 "ret": "txt",
                 "paytoqs": "ignore",
-                "url": "",
+                "url": stats_callback_url,
                 "tls": "",
                 "persist": False,
                 "proxy": "",
@@ -577,8 +557,8 @@ return msg;
                 "authType": "",
                 "senderr": False,
                 "headers": [],
-                "x": 550,
-                "y": agg_y + 80,
+                "x": 600,
+                "y": agg_y,
                 "wires": [[]]
             }
         ])
@@ -1033,7 +1013,8 @@ def run_tests_in_background(job_id, args):
             job_id=job_id,
             delay_queue=delay_data,
             warmup_seconds=int(args.get('warmup', 10)),
-            aggregated_stats_ref=aggregated_stats  # Pass reference to aggregated stats
+            aggregated_stats_ref=aggregated_stats,  # Pass reference to aggregated stats
+            aggregated_stats_lock=aggregated_stats_lock # Pass lock for safe reset
         )
         
         eval_results = controller.run()
