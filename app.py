@@ -954,30 +954,46 @@ def run_tests_in_background(job_id, args):
         container = None
         container_name = None
         
-        if broker_name in get_docker_broker_names():
+        # Initialize Docker client once
+        try:
+            client = docker.from_env()
+        except Exception as e:
+            logger.warning("Failed to initialize Docker client: %s", e)
+            client = None
+        
+        if broker_name in get_docker_broker_names() and client:
             # Direct container name match
-            container = get_broker_container(broker_name)
-            container_name = broker_name
+            try:
+                container = client.containers.get(broker_name)
+                container_name = broker_name
+            except docker.errors.NotFound:
+                # Try finding a container that *contains* the broker name
+                for c in client.containers.list():
+                    if broker_name in c.name.lower():
+                        container = c
+                        container_name = c.name
+                        logger.info("Found fuzzy-matched broker container: %s", container_name)
+                        break
+
             if not container:
                 job_status[job_id] = {
                     'error': f'Broker container not found: {broker_name}',
                     'status': 'failed'
                 }
+                logger.error("Failed to find broker container for '%s'", broker_name)
                 return
         else:
             # When using IP, try to find any running broker container
             try:
                 client = docker.from_env()
-                for known_broker in get_docker_broker_names():
-                    try:
-                        c = client.containers.get(known_broker)
-                        if c.status == 'running':
+                for c in client.containers.list():
+                    for known in get_docker_broker_names():
+                        if known in c.name.lower() and c.status == 'running':
                             container = c
-                            container_name = known_broker
-                            logger.info("Found running broker container: %s", known_broker)
+                            container_name = c.name
+                            logger.info("Auto-detected running broker container: %s", container_name)
                             break
-                    except docker.errors.NotFound:
-                        continue
+                    if container: break
             except Exception as e:
                 logger.warning("Could not search for Docker containers: %s", e)
 
@@ -986,6 +1002,9 @@ def run_tests_in_background(job_id, args):
         monitor_thread = None
         
         if container:
+            # ensure container_name is set for crash injector
+            if not container_name: container_name = container.name
+            
             csv_broker_name = container_name or broker_name
             resource_csv = os.path.join('results', f'resource_usage_{csv_broker_name}_{job_id}.csv')
             stop_event = threading.Event()
@@ -1006,6 +1025,13 @@ def run_tests_in_background(job_id, args):
             aggregated_stats['windows_received'] = 0
         logger.info("Aggregated stats reset for new evaluation")
 
+        # Parse crash schedule if provided
+        crash_schedule = args.get('crash_schedule', [])
+        if crash_schedule:
+            logger.info("Crash injection enabled: %d crash point(s)", len(crash_schedule))
+            for i, cp in enumerate(crash_schedule):
+                logger.info("  Crash #%d: T=%.1fs, duration=%.1fs", i+1, cp['time'], cp['duration'])
+
         controller = EvaluationController(
             broker_host=mqtt_host,
             broker_port=broker_port,
@@ -1014,7 +1040,9 @@ def run_tests_in_background(job_id, args):
             delay_queue=delay_data,
             warmup_seconds=int(args.get('warmup', 10)),
             aggregated_stats_ref=aggregated_stats,  # Pass reference to aggregated stats
-            aggregated_stats_lock=aggregated_stats_lock # Pass lock for safe reset
+            aggregated_stats_lock=aggregated_stats_lock, # Pass lock for safe reset
+            crash_schedule=crash_schedule,
+            container_name=container_name,
         )
         
         eval_results = controller.run()
@@ -1105,7 +1133,17 @@ def results(job_id):
         broker_name=broker_name,
         job_id=job_id,
         stats=stats,
-        resource_data=json.dumps(resource_data))
+        resource_data=json.dumps(resource_data),
+        crash_recovery=json.dumps({
+            'total_crashes_scheduled': stats.get('crash_recovery_total_crashes_scheduled', 0),
+            'total_crashes_executed': stats.get('crash_recovery_total_crashes_executed', 0),
+            'successful_recoveries': stats.get('crash_recovery_successful_recoveries', 0),
+            'failed_recoveries': stats.get('crash_recovery_failed_recoveries', 0),
+            'avg_downtime_sec': stats.get('crash_recovery_avg_downtime_sec', 0),
+            'avg_recovery_latency_sec': stats.get('crash_recovery_avg_recovery_latency_sec', 0),
+            'total_downtime_sec': stats.get('crash_recovery_total_downtime_sec', 0),
+            'crash_events': stats.get('crash_recovery_crash_events', []),
+        }))
 
 
 @app.route('/verify_flow', methods=['GET'])

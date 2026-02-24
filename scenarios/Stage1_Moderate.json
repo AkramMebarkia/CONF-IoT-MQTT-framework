@@ -1,0 +1,163 @@
+{
+    "topics": [
+        "sensor/temperature",
+        "sensor/humidity",
+        "sensor/pressure",
+        "sensor/vibration",
+        "building/floor1",
+        "building/floor2",
+        "building/floor3",
+        "alerts/fire",
+        "alerts/intrusion",
+        "alerts/system",
+        "metrics/latency",
+        "metrics/throughput",
+        "metrics/cpu",
+        "zone/east",
+        "zone/west"
+    ],
+    "publisher_groups": [
+        {
+            "group_name": "HighFreqSensors",
+            "count": 80,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "sensor/temperature",
+                "sensor/humidity",
+                "sensor/pressure",
+                "sensor/vibration"
+            ]
+        },
+        {
+            "group_name": "BuildingMonitors",
+            "count": 40,
+            "frequency": 0.1,
+            "payload_size": 512,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "building/floor1",
+                "building/floor2",
+                "building/floor3"
+            ]
+        },
+        {
+            "group_name": "AlertPublishers",
+            "count": 20,
+            "frequency": 0.2,
+            "payload_size": 1024,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "alerts/fire",
+                "alerts/intrusion",
+                "alerts/system"
+            ]
+        },
+        {
+            "group_name": "ZoneControllers",
+            "count": 30,
+            "frequency": 0.1,
+            "payload_size": 512,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "zone/east",
+                "zone/west"
+            ]
+        },
+        {
+            "group_name": "MetricsProbes",
+            "count": 20,
+            "frequency": 0.05,
+            "payload_size": 128,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "metrics/latency",
+                "metrics/throughput",
+                "metrics/cpu"
+            ]
+        },
+        {
+            "group_name": "BurstPayload",
+            "count": 10,
+            "frequency": 0.1,
+            "payload_size": 4096,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "sensor/temperature",
+                "sensor/humidity"
+            ]
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "group_name": "SensorDashboard",
+            "count": 10,
+            "qos": 0,
+            "topics": [
+                "sensor/temperature",
+                "sensor/humidity",
+                "sensor/pressure",
+                "sensor/vibration"
+            ]
+        },
+        {
+            "group_name": "BuildingOps",
+            "count": 10,
+            "qos": 1,
+            "topics": [
+                "building/floor1",
+                "building/floor2",
+                "building/floor3"
+            ]
+        },
+        {
+            "group_name": "AlertReceivers",
+            "count": 8,
+            "qos": 2,
+            "topics": [
+                "alerts/fire",
+                "alerts/intrusion",
+                "alerts/system"
+            ]
+        },
+        {
+            "group_name": "ZoneMonitors",
+            "count": 8,
+            "qos": 1,
+            "topics": [
+                "zone/east",
+                "zone/west"
+            ]
+        },
+        {
+            "group_name": "MetricsCollectors",
+            "count": 6,
+            "qos": 0,
+            "topics": [
+                "metrics/latency",
+                "metrics/throughput",
+                "metrics/cpu"
+            ]
+        },
+        {
+            "group_name": "FullFeed",
+            "count": 8,
+            "qos": 1,
+            "topics": [
+                "sensor/temperature",
+                "sensor/humidity",
+                "building/floor1",
+                "building/floor2",
+                "zone/east",
+                "zone/west"
+            ]
+        }
+    ]
+}

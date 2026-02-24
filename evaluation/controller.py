@@ -9,13 +9,14 @@ from paho.mqtt.enums import CallbackAPIVersion
 from evaluation.latency import EnhancedLatencyTracker
 from evaluation.throughput import FixedThroughputTracker
 from evaluation.availability import AvailabilityMonitor
+from evaluation.crash_injector import CrashInjector
 from evaluation.stats import StatsAggregator
 
 logger = logging.getLogger(__name__)
 
 
 class EvaluationController:
-    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results", delay_queue=None, warmup_seconds=10, aggregated_stats_ref=None, aggregated_stats_lock=None):
+    def __init__(self, broker_host, broker_port, duration=60, job_id=None, output_dir="results", delay_queue=None, warmup_seconds=10, aggregated_stats_ref=None, aggregated_stats_lock=None, crash_schedule=None, container_name=None):
         self.broker_host = broker_host
         self.broker_port = broker_port
         self.duration = duration
@@ -28,6 +29,11 @@ class EvaluationController:
         self.delay_queue = delay_queue
         self.aggregated_stats_ref = aggregated_stats_ref  # Reference to global aggregated stats
         self.aggregated_stats_lock = aggregated_stats_lock # Lock for safe reset
+
+        # Crash injection
+        self.crash_schedule = crash_schedule or []
+        self.container_name = container_name
+        self.crash_injector = None
 
         self.latency_tracker = EnhancedLatencyTracker()
         self.throughput_tracker = FixedThroughputTracker()
@@ -43,6 +49,8 @@ class EvaluationController:
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
         self.client.on_subscribe = self.on_subscribe
+        # Enable automatic reconnection for crash recovery
+        self.client.reconnect_delay_set(min_delay=1, max_delay=10)
 
         self.aggregator = StatsAggregator(self.job_id, self.broker_host, output_dir=output_dir)
 
@@ -147,6 +155,17 @@ class EvaluationController:
         last_count = 0
         last_report_time = start_time
         no_message_warnings = 0
+
+        # Launch crash injector if configured
+        if self.crash_schedule and self.container_name:
+            self.crash_injector = CrashInjector(
+                container_name=self.container_name,
+                crash_schedule=self.crash_schedule,
+                broker_port=self.broker_port,
+            )
+            self.crash_injector.start(measurement_start_time=start_time)
+            logger.info("Crash injector launched with %d scheduled crash(es)",
+                       len(self.crash_schedule))
         
         while time.time() - start_time < self.duration:
             current_time = time.time()
@@ -184,6 +203,19 @@ class EvaluationController:
 
         logger.info("Data collection finished. Total messages: %d, Latency samples: %d",
                    self.message_count, len(self.latency_tracker.delays))
+
+        # Stop crash injector and collect events
+        crash_summary = None
+        if self.crash_injector:
+            self.crash_injector.stop()
+            crash_summary = self.crash_injector.get_summary()
+            # Feed crash events to availability monitor for correlation
+            self.availability_monitor.set_injected_crash_events(
+                crash_summary.get("crash_events", [])
+            )
+            logger.info("Crash injector finished: %d/%d successful recoveries",
+                       crash_summary.get("successful_recoveries", 0),
+                       crash_summary.get("total_crashes_executed", 0))
 
         self.client.loop_stop()
         self.client.disconnect()
@@ -232,6 +264,8 @@ class EvaluationController:
         self.aggregator.add_module_stats("latency", latency_stats)
         self.aggregator.add_module_stats("throughput", throughput_stats)
         self.aggregator.add_module_stats("availability", availability_stats)
+        if crash_summary:
+            self.aggregator.add_module_stats("crash_recovery", crash_summary)
 
         result = self.aggregator.get_summary()
         logger.info("Evaluation complete. Summary saved to %s", result['saved_to'])

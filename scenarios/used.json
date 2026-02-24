@@ -1,0 +1,184 @@
+{
+    "topics": [
+        "ZoneX_Topic1",
+        "ZoneX_Topic2",
+        "ZoneX_Topic3",
+        "alerts/fire",
+        "alerts/intrusion",
+        "building/floor1",
+        "building/floor2",
+        "g",
+        "metrics/latency",
+        "metrics/throughput",
+        "sensor/humidity",
+        "sensor/temperature"
+    ],
+    "publisher_groups": [
+        {
+            "group_name": "TempSensors",
+            "count": 20,
+            "frequency": 10,
+            "payload_size": 1024,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "sensor/temperature",
+                "sensor/humidity"
+            ]
+        },
+        {
+            "group_name": "AlertSystem",
+            "count": 2,
+            "frequency": 0.5,
+            "payload_size": 2048,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "alerts/fire",
+                "alerts/intrusion"
+            ]
+        },
+        {
+            "group_name": "FloorMonitors",
+            "count": 6,
+            "frequency": 5,
+            "payload_size": 1024,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "building/floor1",
+                "building/floor2"
+            ]
+        },
+        {
+            "group_name": "ZoneX_Publishers",
+            "count": 10,
+            "frequency": 2,
+            "payload_size": 2048,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "ZoneX_Topic1",
+                "ZoneX_Topic2",
+                "ZoneX_Topic3"
+            ]
+        },
+        {
+            "group_name": "rr",
+            "count": 3,
+            "frequency": 1,
+            "payload_size": 1024,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "ZoneX_Topic3"
+            ]
+        },
+        {
+            "group_name": "MicroBurst_QoS0",
+            "count": 4,
+            "frequency": 5,
+            "payload_size": 256,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "g",
+                "building/floor1",
+                "building/floor2"
+            ]
+        },
+        {
+            "group_name": "OccasionalXL",
+            "count": 2,
+            "frequency": 0.2,
+            "payload_size": 65536,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "ZoneX_Topic1",
+                "ZoneX_Topic2"
+            ]
+        },
+        {
+            "group_name": "LatencyProbes",
+            "count": 4,
+            "frequency": 5,
+            "payload_size": 128,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "metrics/latency"
+            ]
+        },
+        {
+            "group_name": "ThroughputCounters",
+            "count": 2,
+            "frequency": 5,
+            "payload_size": 128,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "metrics/throughput"
+            ]
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "group_name": "MainDashboard",
+            "count": 3,
+            "qos": 1,
+            "topics": [
+                "sensor/temperature",
+                "sensor/humidity",
+                "metrics/latency"
+            ]
+        },
+        {
+            "group_name": "SecurityTerminals",
+            "count": 2,
+            "qos": 2,
+            "topics": [
+                "alerts/fire",
+                "alerts/intrusion"
+            ]
+        },
+        {
+            "group_name": "ZoneX_Clients",
+            "count": 6,
+            "qos": 0,
+            "topics": [
+                "ZoneX_Topic1",
+                "ZoneX_Topic2",
+                "ZoneX_Topic3"
+            ]
+        },
+        {
+            "group_name": "asas",
+            "count": 4,
+            "qos": 1,
+            "topics": [
+                "ZoneX_Topic1",
+                "ZoneX_Topic2",
+                "ZoneX_Topic3"
+            ]
+        },
+        {
+            "group_name": "FloorAuditors",
+            "count": 4,
+            "qos": 1,
+            "topics": [
+                "building/floor1",
+                "building/floor2"
+            ]
+        },
+        {
+            "group_name": "MetricsCollectors",
+            "count": 2,
+            "qos": 1,
+            "topics": [
+                "metrics/latency",
+                "metrics/throughput"
+            ]
+        }
+    ]
+}

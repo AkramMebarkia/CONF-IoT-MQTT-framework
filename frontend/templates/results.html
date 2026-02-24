@@ -4,6 +4,7 @@
 <head>
   <title>Simulation Results - {{ broker_name }}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .metric-card {
@@ -77,6 +78,65 @@
       background: rgba(76, 175, 80, 0.1);
       border-radius: 6px;
       padding: 2px 8px;
+    }
+
+    /* Crash Recovery Styles */
+    .crash-recovery-section {
+      background: linear-gradient(135deg, #fff5f5 0%, #fef3e5 100%);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+      border-left: 4px solid #dc3545;
+    }
+
+    .crash-recovery-section h4 {
+      color: #c82333;
+      margin-bottom: 15px;
+    }
+
+    .crash-stat-card {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .crash-stat-value {
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+
+    .crash-stat-label {
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    .crash-event-row td {
+      vertical-align: middle;
+    }
+
+    .crash-badge {
+      display: inline-block;
+      width: 26px;
+      height: 26px;
+      line-height: 26px;
+      border-radius: 50%;
+      background: #dc3545;
+      color: white;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    .recovery-ok {
+      color: #28a745;
+      font-weight: 600;
+    }
+
+    .recovery-fail {
+      color: #dc3545;
+      font-weight: 600;
     }
   </style>
 </head>
@@ -258,6 +318,62 @@
       </div>
     </div>
 
+    <!-- Crash Recovery Section -->
+    <div id="crashRecoverySection" style="display: none;">
+      <div class="crash-recovery-section">
+        <h4><i class="bi bi-lightning-charge"></i> Crash Recovery Analysis</h4>
+
+        <div class="row mb-3">
+          <div class="col-md-3">
+            <div class="crash-stat-card">
+              <div class="crash-stat-value" id="crTotalCrashes">0</div>
+              <div class="crash-stat-label">Crashes Executed</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="crash-stat-card">
+              <div class="crash-stat-value" id="crAvgRecovery" style="color: #dc3545;">0s</div>
+              <div class="crash-stat-label">Avg Recovery Time</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="crash-stat-card">
+              <div class="crash-stat-value" id="crTotalDowntime" style="color: #ffc107;">0s</div>
+              <div class="crash-stat-label">Total Downtime</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="crash-stat-card">
+              <div class="crash-stat-value" id="crAvailability" style="color: #28a745;">100%</div>
+              <div class="crash-stat-label">Availability</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Per-crash details table -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Crash Event Details</h5>
+          </div>
+          <div class="card-body p-1">
+            <table class="table table-sm mb-0" id="crashEventsTable">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>Scheduled At</th>
+                  <th>Duration (configured)</th>
+                  <th>Actual Downtime</th>
+                  <th>Recovery Latency</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Resource Usage Charts -->
     <div class="row">
       <div class="col-12">
@@ -359,6 +475,7 @@
 
   <script>
     const resourceData = {{ resource_data | safe }};
+    const crashRecovery = {{ crash_recovery | safe }};
 
     // Prepare data
     const labels = resourceData.map(d => {
@@ -486,6 +603,40 @@
       },
       options: chartOptions
     });
+
+    // ---- Crash Recovery Rendering ----
+    if (crashRecovery && crashRecovery.total_crashes_scheduled > 0) {
+      document.getElementById('crashRecoverySection').style.display = 'block';
+
+      document.getElementById('crTotalCrashes').textContent = crashRecovery.total_crashes_executed || 0;
+      document.getElementById('crAvgRecovery').textContent = (crashRecovery.avg_downtime_sec || 0).toFixed(1) + 's';
+      document.getElementById('crTotalDowntime').textContent = (crashRecovery.total_downtime_sec || 0).toFixed(1) + 's';
+
+      // Calculate availability if not directly available
+      const availPct = '{{ stats.availability_availability_pct | default("100") }}';
+      document.getElementById('crAvailability').textContent = parseFloat(availPct).toFixed(1) + '%';
+
+      // Populate crash events table
+      const tbody = document.querySelector('#crashEventsTable tbody');
+      const events = crashRecovery.crash_events || [];
+      events.forEach((ev, i) => {
+        const row = document.createElement('tr');
+        row.className = 'crash-event-row';
+        const statusHtml = ev.success
+          ? '<span class="recovery-ok">✓ Recovered</span>'
+          : `<span class="recovery-fail">✗ ${ev.error || 'Failed'}</span>`;
+
+        row.innerHTML = `
+          <td><span class="crash-badge">${i + 1}</span></td>
+          <td>T = ${ev.scheduled_time}s</td>
+          <td>${ev.scheduled_duration}s</td>
+          <td><strong>${ev.actual_downtime.toFixed(2)}s</strong></td>
+          <td>${ev.recovery_latency >= 0 ? '+' : ''}${ev.recovery_latency.toFixed(2)}s</td>
+          <td>${statusHtml}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
   </script>
 </body>
 

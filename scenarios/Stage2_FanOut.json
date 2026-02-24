@@ -1,0 +1,250 @@
+{
+    "topics": [
+        "scada/zone1/telemetry",
+        "scada/zone2/telemetry",
+        "scada/zone3/telemetry",
+        "scada/zone4/telemetry",
+        "scada/zone5/telemetry",
+        "scada/zone6/telemetry",
+        "scada/master/command",
+        "scada/master/status",
+        "scada/alarm/critical",
+        "scada/alarm/warning",
+        "fleet/gps",
+        "fleet/diagnostics",
+        "energy/meter1",
+        "energy/meter2",
+        "energy/meter3"
+    ],
+    "publisher_groups": [
+        {
+            "group_name": "Zone1_PLCs",
+            "count": 30,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone1/telemetry"
+            ]
+        },
+        {
+            "group_name": "Zone2_PLCs",
+            "count": 30,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone2/telemetry"
+            ]
+        },
+        {
+            "group_name": "Zone3_PLCs",
+            "count": 30,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone3/telemetry"
+            ]
+        },
+        {
+            "group_name": "Zone4_PLCs",
+            "count": 25,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone4/telemetry"
+            ]
+        },
+        {
+            "group_name": "Zone5_PLCs",
+            "count": 25,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone5/telemetry"
+            ]
+        },
+        {
+            "group_name": "Zone6_PLCs",
+            "count": 25,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "scada/zone6/telemetry"
+            ]
+        },
+        {
+            "group_name": "MasterControllers",
+            "count": 10,
+            "frequency": 0.1,
+            "payload_size": 512,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/master/command",
+                "scada/master/status"
+            ]
+        },
+        {
+            "group_name": "AlarmGenerators",
+            "count": 10,
+            "frequency": 0.2,
+            "payload_size": 1024,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "scada/alarm/critical",
+                "scada/alarm/warning"
+            ]
+        },
+        {
+            "group_name": "FleetTrackers",
+            "count": 15,
+            "frequency": 0.1,
+            "payload_size": 512,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "fleet/gps",
+                "fleet/diagnostics"
+            ]
+        },
+        {
+            "group_name": "EnergyMeters",
+            "count": 10,
+            "frequency": 0.1,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "energy/meter1",
+                "energy/meter2",
+                "energy/meter3"
+            ]
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "group_name": "Zone1_HMIs",
+            "count": 25,
+            "qos": 1,
+            "topics": [
+                "scada/zone1/telemetry",
+                "scada/master/status",
+                "scada/alarm/critical"
+            ]
+        },
+        {
+            "group_name": "Zone2_HMIs",
+            "count": 25,
+            "qos": 1,
+            "topics": [
+                "scada/zone2/telemetry",
+                "scada/master/status",
+                "scada/alarm/critical"
+            ]
+        },
+        {
+            "group_name": "Zone3_HMIs",
+            "count": 25,
+            "qos": 1,
+            "topics": [
+                "scada/zone3/telemetry",
+                "scada/master/status",
+                "scada/alarm/warning"
+            ]
+        },
+        {
+            "group_name": "Zone4_HMIs",
+            "count": 20,
+            "qos": 1,
+            "topics": [
+                "scada/zone4/telemetry",
+                "scada/master/status"
+            ]
+        },
+        {
+            "group_name": "Zone5_HMIs",
+            "count": 20,
+            "qos": 1,
+            "topics": [
+                "scada/zone5/telemetry",
+                "scada/master/status"
+            ]
+        },
+        {
+            "group_name": "Zone6_HMIs",
+            "count": 20,
+            "qos": 0,
+            "topics": [
+                "scada/zone6/telemetry",
+                "scada/master/status"
+            ]
+        },
+        {
+            "group_name": "CentralSCADA",
+            "count": 40,
+            "qos": 1,
+            "topics": [
+                "scada/zone1/telemetry",
+                "scada/zone2/telemetry",
+                "scada/zone3/telemetry",
+                "scada/zone4/telemetry",
+                "scada/zone5/telemetry",
+                "scada/zone6/telemetry",
+                "scada/master/status"
+            ]
+        },
+        {
+            "group_name": "AlarmManagement",
+            "count": 30,
+            "qos": 2,
+            "topics": [
+                "scada/alarm/critical",
+                "scada/alarm/warning"
+            ]
+        },
+        {
+            "group_name": "Historian",
+            "count": 20,
+            "qos": 1,
+            "topics": [
+                "scada/zone1/telemetry",
+                "scada/zone2/telemetry",
+                "scada/zone3/telemetry",
+                "scada/zone4/telemetry",
+                "scada/zone5/telemetry",
+                "scada/zone6/telemetry"
+            ]
+        },
+        {
+            "group_name": "FleetDashboard",
+            "count": 15,
+            "qos": 0,
+            "topics": [
+                "fleet/gps",
+                "fleet/diagnostics"
+            ]
+        },
+        {
+            "group_name": "EnergyAnalytics",
+            "count": 10,
+            "qos": 1,
+            "topics": [
+                "energy/meter1",
+                "energy/meter2",
+                "energy/meter3"
+            ]
+        }
+    ]
+}

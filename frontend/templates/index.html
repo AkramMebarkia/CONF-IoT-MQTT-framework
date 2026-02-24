@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>MQTT Simulation & Broker Evaluation Platform</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.css" rel="stylesheet">
+
   <style>
     :root {
       --primary-color: #0066cc;
@@ -15,8 +18,8 @@
       --warning-color: #ffc107;
       --info-color: #17a2b8;
       --light-bg: #f8f9fa;
-      --card-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      --hover-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      --hover-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     }
 
     body {
@@ -30,7 +33,7 @@
       color: white;
       padding: 2rem 0;
       margin-bottom: 2rem;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
     .main-header h1 {
@@ -96,14 +99,16 @@
     }
 
     /* Form Controls */
-    .form-control, .form-select {
+    .form-control,
+    .form-select {
       border-radius: 8px;
       border: 1.5px solid #e0e0e0;
       padding: 0.75rem 1rem;
       transition: all 0.3s ease;
     }
 
-    .form-control:focus, .form-select:focus {
+    .form-control:focus,
+    .form-select:focus {
       border-color: #667eea;
       box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
     }
@@ -198,7 +203,7 @@
       background: white;
       border: 1px solid #e0e0e0;
       border-radius: 6px;
-      padding: 0.5rem 1rem;
+      padding: 1rem 1rem;
       margin-bottom: 0.5rem;
       transition: all 0.2s ease;
     }
@@ -279,8 +284,15 @@
 
     /* Animations */
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .fade-in {
@@ -292,11 +304,11 @@
       .main-header h1 {
         font-size: 2rem;
       }
-      
+
       .section-title {
         font-size: 1.2rem;
       }
-      
+
       .custom-card {
         padding: 1rem;
       }
@@ -341,8 +353,150 @@
       color: #dee2e6;
       margin-bottom: 1rem;
     }
+
+    /* Crash Injection */
+    .crash-switch-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+      user-select: none;
+      padding: 0.25rem 0;
+    }
+
+    /* noUiSlider custom skin */
+    #crashSlider {
+      margin: 0 8px;
+    }
+
+    #crashSlider .noUi-connect {
+      background: transparent;
+    }
+
+    #crashSlider .noUi-handle {
+      width: 20px !important;
+      height: 28px !important;
+      right: -10px !important;
+      top: -8px !important;
+      background: #dc3545;
+      border: 2px solid #fff;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(220, 53, 69, 0.45);
+      cursor: grab;
+    }
+
+    #crashSlider .noUi-handle:active {
+      cursor: grabbing;
+    }
+
+    #crashSlider .noUi-handle::before,
+    #crashSlider .noUi-handle::after {
+      display: none;
+    }
+
+    #crashSlider .noUi-tooltip {
+      background: #343a40;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      bottom: 130%;
+    }
+
+    #crashSlider .noUi-pips-horizontal {
+      padding-top: 6px;
+    }
+
+    #crashSlider .noUi-value {
+      font-size: 0.68rem;
+      color: #6c757d;
+    }
+
+    #crashSlider .noUi-marker-horizontal.noUi-marker {
+      height: 5px;
+    }
+
+    .crash-point-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fff1f0;
+      border: 1px solid #ffa39e;
+      border-radius: 20px;
+      padding: 2px 8px 2px 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #cf1322;
+    }
+
+    .crash-point-tag button {
+      background: none;
+      border: none;
+      color: #cf1322;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      font-size: 0.9rem;
+    }
+
+    .crash-point-tag button:hover {
+      color: #820014;
+    }
+
+    .crash-timeline-track {
+      height: 16px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #e9ecef;
+      position: relative;
+      margin-top: 0.4rem;
+    }
+
+    .crash-timeline-seg {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      transition: all 0.25s ease;
+    }
+
+    .crash-timeline-seg.seg-ok {
+      background: #52c41a;
+    }
+
+    .crash-timeline-seg.seg-err {
+      background: #ff4d4f;
+    }
+
+    .crash-legend {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.74rem;
+      color: #6c757d;
+      margin-top: 0.25rem;
+    }
+
+    .crash-legend span::before {
+      content: '';
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    .crash-legend .leg-ok::before {
+      background: #52c41a;
+    }
+
+    .crash-legend .leg-err::before {
+      background: #ff4d4f;
+    }
   </style>
 </head>
+
 <body>
   <!-- Header -->
   <div class="main-header">
@@ -464,12 +618,12 @@
       </div>
 
       <div class="row g-3 mt-2">
-          <div class="mt-3">
-            <div class="topic-item selectable-topic" id="retainToggle" onclick="toggleRetain()">
-              <span><i class="bi bi-pin-angle"></i> Retain Messages</span>
-              <i class="bi bi-check-circle text-success" style="display: none;"></i>
-            </div>
+        <div class="mt-3">
+          <div class="topic-item selectable-topic" id="retainToggle" onclick="toggleRetain()">
+            <span><i class="bi bi-pin-angle"></i> Retain Messages</span>
+            <i class="bi bi-check-circle text-success" style="display: none;"></i>
           </div>
+        </div>
       </div>
 
       <div class="mt-3">
@@ -612,6 +766,86 @@
       </div>
     </div>
 
+    <!-- Step 4.5: Crash Injection -->
+    <div class="custom-card fade-in" id="crashPanel">
+      <div class="section-header">
+        <div class="section-number" style="background: linear-gradient(135deg, #dc3545, #c82333);">
+          <i class="bi bi-lightning"></i>
+        </div>
+        <h2 class="section-title">Crash Injection</h2>
+      </div>
+
+      <!-- Toggle row -->
+      <div class="crash-switch-row" onclick="toggleCrashInjection()">
+        <input class="form-check-input me-2" type="checkbox" id="crashEnabled"
+          style="cursor:pointer; width:1.5em; height:1.5em; margin:0;">
+        <span class="fw-semibold">Enable Crash Injection</span>
+        <span class="text-muted small ms-1">— simulate broker failures to test fault tolerance</span>
+      </div>
+
+      <!-- Config (hidden until enabled) -->
+      <div id="crashConfig" style="display:none; margin-top:1.25rem;">
+
+        <!-- Row 1: duration + presets -->
+        <div class="d-flex align-items-center gap-3 flex-wrap mb-4">
+          <div class="d-flex align-items-center gap-2">
+            <label for="crashDuration" class="form-label mb-0 small text-nowrap fw-semibold">Down for</label>
+            <input id="crashDuration" type="number" class="form-control form-control-sm" value="5" min="1" max="120"
+              style="width:70px" oninput="refreshCrashView()">
+            <span class="small text-muted">s</span>
+          </div>
+          <div class="vr"></div>
+          <div class="d-flex align-items-center gap-1 flex-wrap">
+            <span class="small text-muted me-1">Presets:</span>
+            <button class="btn btn-sm btn-outline-danger" style="border-radius:20px;font-size:.78rem"
+              onclick="applyCrashPreset('single')">Single</button>
+            <button class="btn btn-sm btn-outline-warning" style="border-radius:20px;font-size:.78rem"
+              onclick="applyCrashPreset('periodic')">Periodic</button>
+            <button class="btn btn-sm btn-outline-info" style="border-radius:20px;font-size:.78rem"
+              onclick="applyCrashPreset('random')">Random</button>
+            <button class="btn btn-sm btn-outline-secondary" style="border-radius:20px;font-size:.78rem"
+              onclick="applyCrashPreset('cascading')">Cascading</button>
+          </div>
+          <div class="ms-auto d-flex gap-1">
+            <button class="btn btn-sm btn-outline-primary" onclick="addCrashPoint()">
+              <i class="bi bi-plus-lg"></i> Add point
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="clearCrashPoints()" title="Clear all">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Horizontal noUiSlider -->
+        <div style="padding: 0 4px 8px;">
+          <div
+            style="display:flex; justify-content:space-between; font-size:0.72rem; color:#6c757d; margin-bottom:2px;">
+            <span>0s</span>
+            <span id="crashSliderMaxLabel">60s</span>
+          </div>
+          <div id="crashSlider"></div>
+        </div>
+
+        <!-- Active crash point tags -->
+        <div id="crashTagsRow" class="d-flex flex-wrap gap-2 mt-4 mb-3" style="min-height:28px; align-items:center;">
+          <span class="text-muted small fst-italic">No crash points — drag a handle or click Add</span>
+        </div>
+
+        <!-- Timeline preview -->
+        <div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="small fw-semibold text-muted">Timeline Preview</span>
+            <span id="crashSummaryText" class="small text-muted"></span>
+          </div>
+          <div class="crash-timeline-track" id="crashTimelinePreview"></div>
+          <div class="crash-legend">
+            <span class="leg-ok">Normal</span>
+            <span class="leg-err">Crash window</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
     <!-- Step 5: Configuration Management -->
     <div class="custom-card fade-in">
       <div class="section-header">
@@ -647,8 +881,8 @@
           </div>
           <h5 id="progressText" class="mb-3">Initializing evaluation...</h5>
           <div class="progress">
-            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                 role="progressbar" style="width: 0%">0%</div>
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+              style="width: 0%">0%</div>
           </div>
           <p class="text-muted small mt-3 mb-0">Please wait while we run the evaluation...</p>
         </div>
@@ -679,14 +913,16 @@
                   <p>Start by creating MQTT topics that your publishers and subscribers will use:</p>
                   <ul>
                     <li><strong>Single Topic:</strong> Add individual topics like "sensors/temp/room1"</li>
-                    <li><strong>Topic Group:</strong> Create multiple related topics at once (e.g., "Temperature" with count 5 creates Temperature_Topic1 through Temperature_Topic5)</li>
+                    <li><strong>Topic Group:</strong> Create multiple related topics at once (e.g., "Temperature" with
+                      count 5 creates Temperature_Topic1 through Temperature_Topic5)</li>
                   </ul>
                 </div>
               </div>
             </div>
             <div class="accordion-item">
               <h2 class="accordion-header">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#help2">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                  data-bs-target="#help2">
                   Step 2: Configure Publishers
                 </button>
               </h2>
@@ -705,7 +941,8 @@
             </div>
             <div class="accordion-item">
               <h2 class="accordion-header">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#help3">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                  data-bs-target="#help3">
                   Step 3: Configure Subscribers
                 </button>
               </h2>
@@ -727,11 +964,16 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.js"></script>
   <script>
     // Global variables
     let publisherGroups = [];
     let subscriberGroups = [];
     let topicCache = [];
+
+    // Crash injection state
+    let crashInjectionEnabled = false;
+    let crashPoints = []; // Array of times (seconds) when crashes occur
 
 
     // Docker networking configuration
@@ -774,16 +1016,22 @@
     function showTopicTemplates() {
       const templates = [
         { name: "IoT Sensors", topics: ["sensors/temperature", "sensors/humidity", "sensors/pressure", "sensors/motion"] },
-        { name: "Smart Home", topics: ["home/livingroom/light", "home/bedroom/temp", "home/kitchen/motion", "home/security/alarm"] },
-        { name: "Industrial", topics: ["factory/machine1/status", "factory/machine2/status", "factory/alerts", "factory/metrics"] }
+        {
+          name: "Smart Home", topics: ["home/livingroom/light", "home/bedroom/temp", "home/kitchen/motion",
+            "home/security/alarm"]
+        },
+        {
+          name: "Industrial", topics: ["factory/machine1/status", "factory/machine2/status", "factory/alerts",
+            "factory/metrics"]
+        }
       ];
-      
+
       // You can implement a modal to show these templates
       if (confirm("Load IoT Sensors template?")) {
         templates[0].topics.forEach(async (topic) => {
           await fetch('/topics', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ topic })
           });
         });
@@ -797,7 +1045,7 @@
         const config = BROKER_PRESETS[preset];
         document.getElementById('brokerName').value = config.host;
         document.getElementById('brokerPort').value = config.port;
-        
+
         // Auto-start Docker container if needed
         if (config.docker) {
           showNotification(`Starting ${preset} container...`, 'info');
@@ -824,7 +1072,7 @@
       }
 
       const list = document.getElementById('topicList');
-      
+
       if (topicCache.length === 0) {
         list.innerHTML = '<div class="empty-state"><i class="bi bi-inbox"></i><p>No topics created yet</p></div>';
       } else {
@@ -833,15 +1081,15 @@
           const div = document.createElement('div');
           div.className = 'topic-item';
           div.innerHTML = `
-            <span><i class="bi bi-broadcast-pin"></i> ${t}</span>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteTopic('${t}')">
-              <i class="bi bi-x"></i>
-            </button>
-          `;
+  <span><i class="bi bi-broadcast-pin"></i> ${t}</span>
+  <button class="btn btn-sm btn-outline-danger" onclick="deleteTopic('${t}')">
+    <i class="bi bi-x"></i>
+  </button>
+  `;
           list.appendChild(div);
         });
       }
-      
+
       updateQuickStats();
     }
 
@@ -867,36 +1115,36 @@
       groups.forEach((group, index) => {
         const div = document.createElement('div');
         div.className = 'group-item';
-        
+
         const icon = kind === 'publisher' ? 'bi-send' : 'bi-inbox';
         const arrow = kind === 'publisher' ? '→' : '←';
-        
+
         div.innerHTML = `
-          <div class="d-flex justify-content-between align-items-start">
-            <div class="flex-grow-1">
-              <h6 class="mb-1">
-                <i class="bi ${icon}"></i> ${group.group_name}
-                <span class="badge bg-primary ms-2">${group.count} instances</span>
-              </h6>
-              <div class="group-details">
-                <span class="me-3"><i class="bi bi-diagram-2"></i> Topics: ${group.topics.join(', ')}</span>
-                <span class="me-3"><i class="bi bi-shield-check"></i> QoS: ${group.qos}</span>
-                ${kind === 'publisher' ? `
-                  <span class="me-3"><i class="bi bi-clock"></i> ${group.frequency}s</span>
-                  <span class="me-3"><i class="bi bi-file-binary"></i> ${group.payload_size}B</span>
-                  <span><i class="bi bi-pin-angle"></i> Retain: ${group.retain ? 'Yes' : 'No'}</span>
-                ` : ''}
-              </div>
-            </div>
-            <button class="btn btn-sm btn-outline-danger" onclick="removeGroup('${kind}', ${index})">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-        `;
-        
+  <div class="d-flex justify-content-between align-items-start">
+    <div class="flex-grow-1">
+      <h6 class="mb-1">
+        <i class="bi ${icon}"></i> ${group.group_name}
+        <span class="badge bg-primary ms-2">${group.count} instances</span>
+      </h6>
+      <div class="group-details">
+        <span class="me-3"><i class="bi bi-diagram-2"></i> Topics: ${group.topics.join(', ')}</span>
+        <span class="me-3"><i class="bi bi-shield-check"></i> QoS: ${group.qos}</span>
+        ${kind === 'publisher' ? `
+        <span class="me-3"><i class="bi bi-clock"></i> ${group.frequency}s</span>
+        <span class="me-3"><i class="bi bi-file-binary"></i> ${group.payload_size}B</span>
+        <span><i class="bi bi-pin-angle"></i> Retain: ${group.retain ? 'Yes' : 'No'}</span>
+        ` : ''}
+      </div>
+    </div>
+    <button class="btn btn-sm btn-outline-danger" onclick="removeGroup('${kind}', ${index})">
+      <i class="bi bi-trash"></i>
+    </button>
+  </div>
+  `;
+
         container.appendChild(div);
       });
-      
+
       updateQuickStats();
     }
 
@@ -924,13 +1172,13 @@
         showNotification('Please enter a topic name', 'warning');
         return;
       }
-      
+
       await fetch('/topics', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic: name })
       });
-      
+
       document.getElementById('singleTopic').value = '';
       await refreshAllTopics();
       showNotification(`Topic "${name}" added successfully`, 'success');
@@ -939,18 +1187,18 @@
     async function addTopicGroup() {
       const name = document.getElementById('groupName').value.trim();
       const count = parseInt(document.getElementById('groupCount').value);
-      
+
       if (!name || isNaN(count)) {
         showNotification('Please enter valid group name and count', 'warning');
         return;
       }
-      
+
       await fetch('/topics', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ group_name: name, count })
       });
-      
+
       document.getElementById('groupName').value = '';
       document.getElementById('groupCount').value = '3';
       await refreshAllTopics();
@@ -959,7 +1207,7 @@
 
     async function resetTopics() {
       if (!confirm("Are you sure you want to delete all topics?")) return;
-      
+
       await fetch('/topics', { method: 'DELETE' });
       await refreshAllTopics();
       showNotification('All topics cleared', 'info');
@@ -977,20 +1225,20 @@
       const topics = topicCache.length ? topicCache : await fetchTopics();
       const container = document.getElementById(containerId);
       container.innerHTML = '';
-      
+
       if (topics.length === 0) {
         container.innerHTML = '<div class="text-center text-muted p-3">No topics available. Create topics first.</div>';
         return;
       }
-      
+
       topics.forEach(t => {
         const div = document.createElement('div');
         div.className = 'topic-item selectable-topic';
         div.dataset.topic = t;
         div.innerHTML = `
-          <span><i class="bi bi-broadcast-pin text-muted"></i> ${t}</span>
-          <i class="bi bi-check-circle text-success" style="display: none;"></i>
-        `;
+  <span><i class="bi bi-broadcast-pin text-muted"></i> ${t}</span>
+  <i class="bi bi-check-circle text-success" style="display: none;"></i>
+  `;
         div.onclick = () => toggleTopicSelection(div, containerId);
         container.appendChild(div);
       });
@@ -1003,8 +1251,8 @@
     }
 
     function getCheckedTopics(containerId) {
-        return Array.from(document.querySelectorAll(`#${containerId} .topic-item.selected`))
-            .map(item => item.dataset.topic);
+      return Array.from(document.querySelectorAll(`#${containerId} .topic-item.selected`))
+        .map(item => item.dataset.topic);
     }
 
     // Publisher/Subscriber management
@@ -1025,14 +1273,14 @@
       const group = { group_name, count, frequency, payload_size, qos, retain, topics };
       publisherGroups.push(group);
       renderGroupList(publisherGroups, 'pubGroupList', 'publisher');
-      
+
       // Clear form
       document.getElementById('pubGroupName').value = '';
       document.querySelectorAll('#pubTopics input:checked').forEach(cb => cb.checked = false);
-      retainEnabled = false;  // Reset retain toggle
+      retainEnabled = false; // Reset retain toggle
       document.getElementById('retainToggle').classList.remove('selected');
       document.querySelector('#retainToggle .bi-check-circle').style.display = 'none';
-      
+
       showNotification(`Publisher group "${group_name}" added`, 'success');
     }
 
@@ -1050,11 +1298,11 @@
       const group = { group_name, count, qos, topics };
       subscriberGroups.push(group);
       renderGroupList(subscriberGroups, 'subGroupList', 'subscriber');
-      
+
       // Clear form
       document.getElementById('subGroupName').value = '';
       document.querySelectorAll('#subTopics input:checked').forEach(cb => cb.checked = false);
-      
+
       showNotification(`Subscriber group "${group_name}" added`, 'success');
     }
 
@@ -1088,28 +1336,28 @@
     async function deploySimulation() {
       const brokerInput = document.getElementById('brokerName').value.trim();
       const brokerPort = parseInt(document.getElementById('brokerPort').value);
-      
+
       // Validate configuration
       if (!brokerInput) {
         showNotification('Please enter a broker host', 'warning');
         return;
       }
-      
+
       // Show info about Docker configuration if applicable
       if (isDockerBroker(brokerInput)) {
         console.log(`Deploying with Docker broker: ${brokerInput}`);
       }
-      
+
       const payload = {
         publisher_groups: publisherGroups,
         subscriber_groups: subscriberGroups,
-        broker_name: brokerInput,  // Backend will handle Docker translation
+        broker_name: brokerInput, // Backend will handle Docker translation
         broker_port: brokerPort
       };
 
       const deployBtn = document.getElementById('deployBtn');
       const statusEl = document.getElementById('deployStatus');
-      
+
       deployBtn.disabled = true;
       deployBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deploying...';
       statusEl.innerHTML = '';
@@ -1125,41 +1373,41 @@
 
         if (res.ok) {
           statusEl.innerHTML = `
-            <div class="status-message status-success">
-              <i class="bi bi-check-circle me-2"></i>
-              Deployed successfully!
-              ${isDockerBroker(brokerInput) ? '<br><small>Using Docker networking</small>' : ''}
-            </div>
-          `;
-          
+  <div class="status-message status-success">
+    <i class="bi bi-check-circle me-2"></i>
+    Deployed successfully!
+    ${isDockerBroker(brokerInput) ? '<br><small>Using Docker networking</small>' : ''}
+  </div>
+  `;
+
           if (data.warnings?.length) {
             statusEl.innerHTML += `
-              <div class="status-message status-warning mt-2">
-                <div>
-                  <i class="bi bi-exclamation-triangle me-2"></i>
-                  <strong>Warnings:</strong>
-                  <ul class="mb-0 mt-2">
-                    ${data.warnings.map(w => `<li>${w}</li>`).join('')}
-                  </ul>
-                </div>
-              </div>
-            `;
+  <div class="status-message status-warning mt-2">
+    <div>
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      <strong>Warnings:</strong>
+      <ul class="mb-0 mt-2">
+        ${data.warnings.map(w => `<li>${w}</li>`).join('')}
+      </ul>
+    </div>
+  </div>
+  `;
           }
         } else {
           statusEl.innerHTML = `
-            <div class="status-message status-error">
-              <i class="bi bi-x-circle me-2"></i>
-              Error: ${data.error || "Unknown error"}
-            </div>
-          `;
+  <div class="status-message status-error">
+    <i class="bi bi-x-circle me-2"></i>
+    Error: ${data.error || "Unknown error"}
+  </div>
+  `;
         }
       } catch (err) {
         statusEl.innerHTML = `
-          <div class="status-message status-error">
-            <i class="bi bi-x-circle me-2"></i>
-            Exception: ${err.message}
-          </div>
-        `;
+  <div class="status-message status-error">
+    <i class="bi bi-x-circle me-2"></i>
+    Exception: ${err.message}
+  </div>
+  `;
       } finally {
         deployBtn.disabled = false;
         deployBtn.innerHTML = '<i class="bi bi-rocket-takeoff"></i> Deploy Simulation';
@@ -1178,10 +1426,19 @@
         duration: duration,
       };
 
+      // Include crash schedule if enabled
+      if (crashInjectionEnabled && crashPoints.length > 0) {
+        const crashDuration = parseFloat(document.getElementById('crashDuration').value) || 5;
+        payload.crash_schedule = crashPoints.map(t => ({
+          time: t,
+          duration: crashDuration
+        }));
+      }
+
       const modal = new bootstrap.Modal(document.getElementById('progressModal'));
       const txt = document.getElementById('progressText');
       const bar = document.getElementById('progressBar');
-      
+
       modal.show();
 
       let job_id;
@@ -1291,7 +1548,7 @@
     }
 
     function downloadConfig() {
-      const blob = new Blob([JSON.stringify(getCurrentConfig(), null, 2)], {type: 'application/json'});
+      const blob = new Blob([JSON.stringify(getCurrentConfig(), null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1322,7 +1579,7 @@
         'success': 'alert-success',
         'error': 'alert-danger',
         'warning': 'alert-warning',
-                'info': 'alert-info'
+        'info': 'alert-info'
       }[type] || 'alert-info';
 
       const icon = {
@@ -1333,14 +1590,15 @@
       }[type] || 'bi-info-circle';
 
       const notification = document.createElement('div');
-      notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+      notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed top-0 start-50
+  translate-middle-x mt-3`;
       notification.style.zIndex = '9999';
       notification.style.minWidth = '300px';
       notification.innerHTML = `
-        <i class="bi ${icon} me-2"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      `;
+  <i class="bi ${icon} me-2"></i>
+  ${message}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
 
       document.body.appendChild(notification);
 
@@ -1376,7 +1634,7 @@
     });
 
     // Add tooltips to all elements with title attribute
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
       tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
@@ -1410,7 +1668,7 @@
 
     // Add visual feedback for drag and drop
     const dropZone = document.querySelector('.container');
-    
+
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'copy';
@@ -1424,7 +1682,7 @@
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.style.backgroundColor = '';
-      
+
       const file = e.dataTransfer.files[0];
       if (file && file.type === 'application/json') {
         const reader = new FileReader();
@@ -1448,35 +1706,35 @@
       indicator.className = 'position-fixed bottom-0 end-0 m-3 p-2 bg-white rounded shadow-sm';
       indicator.style.fontSize = '0.85rem';
       indicator.style.zIndex = '1000';
-      
+
       try {
         // Check Node-RED
         const nodeRedResponse = await fetch('/verify_flow');
         const nodeRedData = await nodeRedResponse.json();
         const nodeRedOk = nodeRedResponse.ok;
-        
+
         // Check current broker configuration
         const brokerName = document.getElementById('brokerName').value;
         const isDocker = isDockerBroker(brokerName);
-        
+
         indicator.innerHTML = `
-          <div class="d-flex align-items-center gap-2">
-            <span class="${nodeRedOk ? 'text-success' : 'text-danger'}">
-              <i class="bi bi-circle-fill"></i> Node-RED
-            </span>
-            <span class="text-info">
-              <i class="bi bi-${isDocker ? 'box' : 'pc-display'}"></i> ${brokerName || 'No broker'}
-            </span>
-          </div>
-        `;
+  <div class="d-flex align-items-center gap-2">
+    <span class="${nodeRedOk ? 'text-success' : 'text-danger'}">
+      <i class="bi bi-circle-fill"></i> Node-RED
+    </span>
+    <span class="text-info">
+      <i class="bi bi-${isDocker ? 'box' : 'pc-display'}"></i> ${brokerName || 'No broker'}
+    </span>
+  </div>
+  `;
       } catch (e) {
         indicator.innerHTML = `
-          <div class="text-warning">
-            <i class="bi bi-exclamation-circle"></i> Connection check failed
-          </div>
-        `;
+  <div class="text-warning">
+    <i class="bi bi-exclamation-circle"></i> Connection check failed
+  </div>
+  `;
       }
-      
+
       document.body.appendChild(indicator);
     }
 
@@ -1496,7 +1754,7 @@
       searchInput.type = 'text';
       searchInput.className = 'form-control form-control-sm mb-2';
       searchInput.placeholder = 'Search topics...';
-      
+
       searchInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
@@ -1507,7 +1765,7 @@
           });
         }, 300);
       });
-      
+
       const topicList = document.getElementById('topicList');
       topicList.parentNode.insertBefore(searchInput, topicList);
     }
@@ -1525,8 +1783,242 @@
       })
     };
 
+    // ==========================================================================
+    // CRASH INJECTION — noUiSlider-based
+    // ==========================================================================
+    let crashSlider = null;
+
+    function getEvalDuration() {
+      return Math.max(5, parseInt(document.getElementById('evalDuration').value, 10) || 60);
+    }
+
+    function getCrashDuration() {
+      return Math.max(1, parseFloat(document.getElementById('crashDuration').value) || 5);
+    }
+
+    function toggleCrashInjection() {
+      crashInjectionEnabled = !crashInjectionEnabled;
+      document.getElementById('crashEnabled').checked = crashInjectionEnabled;
+      var cfg = document.getElementById('crashConfig');
+      cfg.style.display = crashInjectionEnabled ? 'block' : 'none';
+      if (crashInjectionEnabled) {
+        buildSlider();
+      }
+    }
+
+    function buildSlider() {
+      var el = document.getElementById('crashSlider');
+      var duration = getEvalDuration();
+
+      if (crashSlider) {
+        crashSlider.destroy();
+        crashSlider = null;
+      }
+
+      var startVals;
+      if (crashPoints.length > 0) {
+        startVals = crashPoints.slice();
+      } else {
+        startVals = [Math.round(duration / 2)];
+        crashPoints = startVals.slice();
+      }
+
+      var tooltips = startVals.map(function () {
+        return {
+          to: function (v) { return Math.round(v) + 's'; },
+          from: function (v) { return parseInt(v); }
+        };
+      });
+
+      crashSlider = noUiSlider.create(el, {
+        start: startVals,
+        connect: false,
+        step: 1,
+        range: { min: 0, max: duration },
+        tooltips: tooltips,
+        format: {
+          to: function (v) { return Math.round(v); },
+          from: function (v) { return parseInt(v); }
+        },
+        pips: {
+          mode: 'count',
+          values: 6,
+          density: 5,
+          format: {
+            to: function (v) { return Math.round(v) + 's'; }
+          }
+        }
+      });
+
+      crashSlider.on('update', function (values) {
+        crashPoints = values.map(function (v) { return parseInt(v); }).sort(function (a, b) { return a - b; });
+        refreshCrashView();
+      });
+
+      document.getElementById('crashSliderMaxLabel').textContent = duration + 's';
+      refreshCrashView();
+    }
+
+    function addCrashPoint() {
+      if (!crashInjectionEnabled) return;
+      var duration = getEvalDuration();
+      var cd = getCrashDuration();
+      var newTime;
+
+      if (crashPoints.length === 0) {
+        newTime = Math.round(duration / 2);
+      } else {
+        var sorted = [0].concat(crashPoints.map(function (t) { return t + cd; }), [duration]);
+        sorted.sort(function (a, b) { return a - b; });
+        var maxGap = 0, gapStart = 0;
+        for (var i = 1; i < sorted.length; i++) {
+          var gap = sorted[i] - sorted[i - 1];
+          if (gap > maxGap) {
+            maxGap = gap;
+            gapStart = sorted[i - 1];
+          }
+        }
+        newTime = Math.min(Math.round(gapStart + maxGap / 2), duration - cd);
+      }
+      newTime = Math.max(1, newTime);
+      crashPoints.push(newTime);
+      crashPoints.sort(function (a, b) { return a - b; });
+      buildSlider();
+    }
+
+    function removeCrashPoint(idx) {
+      crashPoints.splice(idx, 1);
+      buildSlider();
+    }
+
+    function clearCrashPoints() {
+      crashPoints = [];
+      buildSlider();
+    }
+
+    function refreshCrashView() {
+      renderCrashTags();
+      renderCrashTimeline();
+    }
+
+    function renderCrashTags() {
+      var row = document.getElementById('crashTagsRow');
+      if (!row) return;
+      if (crashPoints.length === 0) {
+        row.innerHTML = '<span class="text-muted small fst-italic">No crash points — drag a handle or click Add</span>';
+        return;
+      }
+      var cd = getCrashDuration();
+      var tagsHtml = '';
+      for (var i = 0; i < crashPoints.length; i++) {
+        var t = crashPoints[i];
+        tagsHtml += '<span class="crash-point-tag">';
+        tagsHtml += '<i class="bi bi-lightning-fill" style="font-size:.65rem"></i> ';
+        tagsHtml += 'T=' + t + 's&nbsp;<span style="font-weight:400;color:#888">\u2193' + cd + 's</span> ';
+        tagsHtml += '<button onclick="removeCrashPoint(' + i + ')" title="Remove">\u00d7</button>';
+        tagsHtml += '</span>';
+      }
+      row.innerHTML = tagsHtml;
+
+      var total = crashPoints.length * cd;
+      var dur = getEvalDuration();
+      var pct = ((total / dur) * 100).toFixed(0);
+      var sumEl = document.getElementById('crashSummaryText');
+      if (sumEl) {
+        sumEl.textContent = crashPoints.length + ' crash' + (crashPoints.length > 1 ? 'es' : '') + ' \u00b7 ' + total + 's downtime \u00b7 ' + pct + '% of run';
+      }
+    }
+
+    function renderCrashTimeline() {
+      var preview = document.getElementById('crashTimelinePreview');
+      if (!preview) return;
+      var dur = getEvalDuration();
+      var cd = getCrashDuration();
+
+      if (crashPoints.length === 0) {
+        preview.innerHTML = '<div class="crash-timeline-seg seg-ok" style="left:0;width:100%"></div>';
+        return;
+      }
+
+      var sorted = crashPoints.slice().sort(function (a, b) { return a - b; });
+      var html = '';
+      var pos = 0;
+
+      for (var i = 0; i < sorted.length; i++) {
+        var t = sorted[i];
+        var end = Math.min(t + cd, dur);
+        if (t > pos) {
+          var l1 = (pos / dur * 100).toFixed(2);
+          var w1 = ((t - pos) / dur * 100).toFixed(2);
+          html += '<div class="crash-timeline-seg seg-ok" style="left:' + l1 + '%;width:' + w1 + '%"></div>';
+        }
+        var cl = (t / dur * 100).toFixed(2);
+        var cw = ((end - t) / dur * 100).toFixed(2);
+        html += '<div class="crash-timeline-seg seg-err" style="left:' + cl + '%;width:' + cw + '%" title="Crash @' + t + 's for ' + cd + 's"></div>';
+        pos = end;
+      }
+
+      if (pos < dur) {
+        var l2 = (pos / dur * 100).toFixed(2);
+        var w2 = ((dur - pos) / dur * 100).toFixed(2);
+        html += '<div class="crash-timeline-seg seg-ok" style="left:' + l2 + '%;width:' + w2 + '%"></div>';
+      }
+      preview.innerHTML = html;
+    }
+
+    function applyCrashPreset(type) {
+      var dur = getEvalDuration();
+      var cd = getCrashDuration();
+      crashPoints = [];
+      switch (type) {
+        case 'single':
+          crashPoints = [Math.round(dur / 2)];
+          break;
+        case 'periodic':
+          var pgap = Math.round(dur / 4);
+          for (var pt = pgap; pt + cd < dur; pt += pgap) {
+            crashPoints.push(pt);
+          }
+          break;
+        case 'random':
+          var n = Math.min(3, Math.floor(dur / (cd * 2 + 5)));
+          var used = [];
+          for (var ri = 0; ri < n * 20 && crashPoints.length < n; ri++) {
+            var rt = Math.round(Math.random() * (dur - cd - 2)) + 1;
+            var ok = true;
+            for (var j = 0; j < used.length; j++) {
+              if (Math.abs(used[j] - rt) <= cd + 3) { ok = false; break; }
+            }
+            if (ok) { crashPoints.push(rt); used.push(rt); }
+          }
+          crashPoints.sort(function (a, b) { return a - b; });
+          break;
+        case 'cascading':
+          var cstep = Math.round(dur / 5);
+          for (var ct = cstep; ct + cd < dur && crashPoints.length < 4; ct += cstep) {
+            crashPoints.push(ct);
+          }
+          break;
+      }
+      buildSlider();
+    }
+
+    // Prune crash points if eval duration changes
+    document.getElementById('evalDuration').addEventListener('change', function () {
+      if (crashInjectionEnabled) {
+        var dur = getEvalDuration();
+        crashPoints = crashPoints.filter(function (t) { return t < dur; });
+        buildSlider();
+      }
+    });
+
+    // Legacy aliases
+    function updateCrashPreview() { refreshCrashView(); }
+    function renderCrashSchedule() { renderCrashTags(); }
+
     console.log('MQTT Simulation Platform initialized successfully');
     console.log('Keyboard shortcuts: Ctrl+S (save), Ctrl+O (load), Ctrl+D (deploy), Ctrl+E (evaluate)');
   </script>
 </body>
+
 </html>

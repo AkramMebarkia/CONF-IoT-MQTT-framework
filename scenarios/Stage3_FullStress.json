@@ -1,0 +1,303 @@
+{
+    "topics": [
+        "factory/line1/vibration",
+        "factory/line1/temperature",
+        "factory/line2/vibration",
+        "factory/line2/temperature",
+        "factory/line3/vibration",
+        "factory/line3/temperature",
+        "factory/line4/vibration",
+        "factory/line4/temperature",
+        "scada/zone1/plc",
+        "scada/zone2/plc",
+        "scada/zone3/plc",
+        "scada/zone4/plc",
+        "alerts/critical",
+        "alerts/warning",
+        "alerts/info",
+        "fleet/gps",
+        "fleet/engine",
+        "fleet/cargo",
+        "energy/grid1",
+        "energy/grid2"
+    ],
+    "publisher_groups": [
+        {
+            "group_name": "Line1_Vibration",
+            "count": 60,
+            "frequency": 0.02,
+            "payload_size": 128,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "factory/line1/vibration"
+            ]
+        },
+        {
+            "group_name": "Line2_Vibration",
+            "count": 60,
+            "frequency": 0.02,
+            "payload_size": 128,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "factory/line2/vibration"
+            ]
+        },
+        {
+            "group_name": "Line3_Vibration",
+            "count": 60,
+            "frequency": 0.02,
+            "payload_size": 128,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "factory/line3/vibration"
+            ]
+        },
+        {
+            "group_name": "Line4_Vibration",
+            "count": 60,
+            "frequency": 0.02,
+            "payload_size": 128,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "factory/line4/vibration"
+            ]
+        },
+        {
+            "group_name": "TempSensors_All",
+            "count": 80,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "factory/line1/temperature",
+                "factory/line2/temperature",
+                "factory/line3/temperature",
+                "factory/line4/temperature"
+            ]
+        },
+        {
+            "group_name": "SCADA_Controllers",
+            "count": 60,
+            "frequency": 0.05,
+            "payload_size": 512,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "scada/zone1/plc",
+                "scada/zone2/plc",
+                "scada/zone3/plc",
+                "scada/zone4/plc"
+            ]
+        },
+        {
+            "group_name": "AlertGenerators",
+            "count": 30,
+            "frequency": 0.1,
+            "payload_size": 1024,
+            "qos": 2,
+            "retain": false,
+            "topics": [
+                "alerts/critical",
+                "alerts/warning",
+                "alerts/info"
+            ]
+        },
+        {
+            "group_name": "FleetTrackers",
+            "count": 50,
+            "frequency": 0.05,
+            "payload_size": 512,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "fleet/gps",
+                "fleet/engine",
+                "fleet/cargo"
+            ]
+        },
+        {
+            "group_name": "EnergyMeters",
+            "count": 40,
+            "frequency": 0.05,
+            "payload_size": 256,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "energy/grid1",
+                "energy/grid2"
+            ]
+        },
+        {
+            "group_name": "HeavyPayload",
+            "count": 10,
+            "frequency": 0.2,
+            "payload_size": 65536,
+            "qos": 1,
+            "retain": false,
+            "topics": [
+                "factory/line1/vibration",
+                "factory/line2/vibration"
+            ]
+        },
+        {
+            "group_name": "MicroBurst_QoS0",
+            "count": 20,
+            "frequency": 0.01,
+            "payload_size": 64,
+            "qos": 0,
+            "retain": false,
+            "topics": [
+                "factory/line3/vibration",
+                "factory/line4/vibration"
+            ]
+        }
+    ],
+    "subscriber_groups": [
+        {
+            "group_name": "FactoryDashboard",
+            "count": 50,
+            "qos": 0,
+            "topics": [
+                "factory/line1/vibration",
+                "factory/line1/temperature",
+                "factory/line2/vibration",
+                "factory/line2/temperature",
+                "factory/line3/vibration",
+                "factory/line3/temperature",
+                "factory/line4/vibration",
+                "factory/line4/temperature"
+            ]
+        },
+        {
+            "group_name": "Line1_Monitors",
+            "count": 30,
+            "qos": 0,
+            "topics": [
+                "factory/line1/vibration",
+                "factory/line1/temperature"
+            ]
+        },
+        {
+            "group_name": "Line2_Monitors",
+            "count": 30,
+            "qos": 0,
+            "topics": [
+                "factory/line2/vibration",
+                "factory/line2/temperature"
+            ]
+        },
+        {
+            "group_name": "Line3_Monitors",
+            "count": 30,
+            "qos": 0,
+            "topics": [
+                "factory/line3/vibration",
+                "factory/line3/temperature"
+            ]
+        },
+        {
+            "group_name": "Line4_Monitors",
+            "count": 30,
+            "qos": 0,
+            "topics": [
+                "factory/line4/vibration",
+                "factory/line4/temperature"
+            ]
+        },
+        {
+            "group_name": "SCADA_HMIs",
+            "count": 60,
+            "qos": 1,
+            "topics": [
+                "scada/zone1/plc",
+                "scada/zone2/plc",
+                "scada/zone3/plc",
+                "scada/zone4/plc"
+            ]
+        },
+        {
+            "group_name": "CentralSCADA",
+            "count": 50,
+            "qos": 1,
+            "topics": [
+                "scada/zone1/plc",
+                "scada/zone2/plc",
+                "scada/zone3/plc",
+                "scada/zone4/plc",
+                "alerts/critical"
+            ]
+        },
+        {
+            "group_name": "AlertReceivers",
+            "count": 40,
+            "qos": 2,
+            "topics": [
+                "alerts/critical",
+                "alerts/warning",
+                "alerts/info"
+            ]
+        },
+        {
+            "group_name": "FleetControl",
+            "count": 40,
+            "qos": 0,
+            "topics": [
+                "fleet/gps",
+                "fleet/engine",
+                "fleet/cargo"
+            ]
+        },
+        {
+            "group_name": "FleetAnalytics",
+            "count": 30,
+            "qos": 1,
+            "topics": [
+                "fleet/gps",
+                "fleet/engine"
+            ]
+        },
+        {
+            "group_name": "EnergyDashboard",
+            "count": 30,
+            "qos": 1,
+            "topics": [
+                "energy/grid1",
+                "energy/grid2"
+            ]
+        },
+        {
+            "group_name": "GlobalHistorian",
+            "count": 60,
+            "qos": 1,
+            "topics": [
+                "factory/line1/vibration",
+                "factory/line2/vibration",
+                "factory/line3/vibration",
+                "factory/line4/vibration",
+                "scada/zone1/plc",
+                "scada/zone2/plc",
+                "fleet/gps",
+                "energy/grid1",
+                "energy/grid2"
+            ]
+        },
+        {
+            "group_name": "ComplianceAudit",
+            "count": 40,
+            "qos": 1,
+            "topics": [
+                "alerts/critical",
+                "alerts/warning",
+                "scada/zone1/plc",
+                "scada/zone2/plc",
+                "scada/zone3/plc",
+                "scada/zone4/plc"
+            ]
+        }
+    ]
+}
